@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1049036823270",
+    "project_id": "azana-sculpt",
+    "storage_bucket": "azana-sculpt.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1049036823270:android:b800f7892b8bd6c4f4b927",
+        "android_client_info": {
+          "package_name": "com.example.azana_sculpt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQFBLUJceluhw86LKGahSdriZ9X6H9xs0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

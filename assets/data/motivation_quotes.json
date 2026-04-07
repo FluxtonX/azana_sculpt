@@ -1,0 +1,302 @@
+[
+  {
+    "id": 1,
+    "quote": "The iron never lies, but it also never hurries.",
+    "author": "A'zana Sculpt",
+    "category": "Strength"
+  },
+  {
+    "id": 2,
+    "quote": "Your future self is already thanking you for today's grind.",
+    "author": "A'zana Sculpt",
+    "category": "Discipline"
+  },
+  {
+    "id": 3,
+    "quote": "A single rep won't change you, but a thousand will.",
+    "author": "Unknown",
+    "category": "Consistency"
+  },
+  {
+    "id": 4,
+    "quote": "Sculpting is subtraction: remove doubt, add effort.",
+    "author": "A'zana Sculpt",
+    "category": "Transformation"
+  },
+  {
+    "id": 5,
+    "quote": "Weakness is a blueprint, not a life sentence.",
+    "author": "Unknown",
+    "category": "Strength"
+  },
+  {
+    "id": 6,
+    "quote": "Don't count the days. Make the days count.",
+    "author": "A'zana Sculpt",
+    "category": "Consistency"
+  },
+  {
+    "id": 7,
+    "quote": "Mental calluses form before physical ones.",
+    "author": "Unknown",
+    "category": "Discipline"
+  },
+  {
+    "id": 8,
+    "quote": "Every drop of sweat is a vote for the person you're becoming.",
+    "author": "A'zana Sculpt",
+    "category": "Transformation"
+  },
+  {
+    "id": 9,
+    "quote": "The bar doesn't care about your mood.",
+    "author": "Unknown",
+    "category": "Strength"
+  },
+  {
+    "id": 10,
+    "quote": "Motivation is a spark; discipline is the forge.",
+    "author": "A'zana Sculpt",
+    "category": "Discipline"
+  },
+  {
+    "id": 11,
+    "quote": "Small hinges swing big doors.",
+    "author": "Unknown",
+    "category": "Consistency"
+  },
+  {
+    "id": 12,
+    "quote": "You don't rise to the level of your goals, you fall to the level of your systems.",
+    "author": "A'zana Sculpt",
+    "category": "Discipline"
+  },
+  {
+    "id": 13,
+    "quote": "Comfort is a thief wrapped in soft blankets.",
+    "author": "Unknown",
+    "category": "Strength"
+  },
+  {
+    "id": 14,
+    "quote": "Sculpting a masterpiece requires chipping away what isn't you.",
+    "author": "A'zana Sculpt",
+    "category": "Transformation"
+  },
+  {
+    "id": 15,
+    "quote": "One more rep is a conversation with your limits.",
+    "author": "Unknown",
+    "category": "Strength"
+  },
+  {
+    "id": 16,
+    "quote": "Consistency is the silent partner of champions.",
+    "author": "A'zana Sculpt",
+    "category": "Consistency"
+  },
+  {
+    "id": 17,
+    "quote": "Your brain will quit before your muscles. Teach it otherwise.",
+    "author": "Unknown",
+    "category": "Discipline"
+  },
+  {
+    "id": 18,
+    "quote": "Rest is strategic, but quitting is permanent.",
+    "author": "A'zana Sculpt",
+    "category": "Strength"
+  },
+  {
+    "id": 19,
+    "quote": "You can't sculpt marble with a feather.",
+    "author": "Unknown",
+    "category": "Transformation"
+  },
+  {
+    "id": 20,
+    "quote": "The pain you avoid today becomes the regret you carry tomorrow.",
+    "author": "A'zana Sculpt",
+    "category": "Discipline"
+  },
+  {
+    "id": 21,
+    "quote": "Show up invisible, leave undeniable.",
+    "author": "Unknown",
+    "category": "Consistency"
+  },
+  {
+    "id": 22,
+    "quote": "Strength is a skill, not a gift.",
+    "author": "A'zana Sculpt",
+    "category": "Strength"
+  },
+  {
+    "id": 23,
+    "quote": "The mirror doesn't lie, but it also doesn't see the whole war.",
+    "author": "Unknown",
+    "category": "Transformation"
+  },
+  {
+    "id": 24,
+    "quote": "Focus where the eyes can't see: inside.",
+    "author": "A'zana Sculpt",
+    "category": "Discipline"
+  },
+  {
+    "id": 25,
+    "quote": "A year from now, you'll wish you started today.",
+    "author": "Unknown",
+    "category": "Consistency"
+  },
+  {
+    "id": 26,
+    "quote": "Lift as if your ancestors are watching.",
+    "author": "A'zana Sculpt",
+    "category": "Strength"
+  },
+  {
+    "id": 27,
+    "quote": "Transformation is not an event, it's a direction.",
+    "author": "Unknown",
+    "category": "Transformation"
+  },
+  {
+    "id": 28,
+    "quote": "Your only competition is the voice that says 'enough'.",
+    "author": "A'zana Sculpt",
+    "category": "Discipline"
+  },
+  {
+    "id": 29,
+    "quote": "Do it tired. Do it scared. Do it anyway.",
+    "author": "Unknown",
+    "category": "Strength"
+  },
+  {
+    "id": 30,
+    "quote": "Soreness is the whisper of adaptation.",
+    "author": "A'zana Sculpt",
+    "category": "Transformation"
+  },
+  {
+    "id": 31,
+    "quote": "You don't find time for fitness; you make time for your future.",
+    "author": "Unknown",
+    "category": "Consistency"
+  },
+  {
+    "id": 32,
+    "quote": "The heaviest weight is the one you haven't lifted yet.",
+    "author": "A'zana Sculpt",
+    "category": "Strength"
+  },
+  {
+    "id": 33,
+    "quote": "Discipline is memory training for the will.",
+    "author": "Unknown",
+    "category": "Discipline"
+  },
+  {
+    "id": 34,
+    "quote": "Sculpting requires pressure. Without it, you're just soft clay.",
+    "author": "A'zana Sculpt",
+    "category": "Transformation"
+  },
+  {
+    "id": 35,
+    "quote": "Don't let a bad day become a bad week.",
+    "author": "Unknown",
+    "category": "Consistency"
+  },
+  {
+    "id": 36,
+    "quote": "Muscles grow in the dark of effort.",
+    "author": "A'zana Sculpt",
+    "category": "Strength"
+  },
+  {
+    "id": 37,
+    "quote": "Your mind is the first muscle to train.",
+    "author": "Unknown",
+    "category": "Discipline"
+  },
+  {
+    "id": 38,
+    "quote": "Every champion was once a beginner who refused to quit.",
+    "author": "A'zana Sculpt",
+    "category": "Consistency"
+  },
+  {
+    "id": 39,
+    "quote": "You are the sculptor and the stone.",
+    "author": "Unknown",
+    "category": "Transformation"
+  },
+  {
+    "id": 40,
+    "quote": "The grind doesn't ask for applause.",
+    "author": "A'zana Sculpt",
+    "category": "Strength"
+  },
+  {
+    "id": 41,
+    "quote": "Laziness is a habit. So is hustle.",
+    "author": "Unknown",
+    "category": "Discipline"
+  },
+  {
+    "id": 42,
+    "quote": "Results are rented, and the rent is due every day.",
+    "author": "A'zana Sculpt",
+    "category": "Consistency"
+  },
+  {
+    "id": 43,
+    "quote": "Sculpting your body is easy. Sculpting your mind is the real art.",
+    "author": "Unknown",
+    "category": "Transformation"
+  },
+  {
+    "id": 44,
+    "quote": "Your edge is invisible: it's the choice to continue.",
+    "author": "A'zana Sculpt",
+    "category": "Strength"
+  },
+  {
+    "id": 45,
+    "quote": "Don't negotiate with your alarm clock.",
+    "author": "Unknown",
+    "category": "Discipline"
+  },
+  {
+    "id": 46,
+    "quote": "Fall in love with the boredom of repetition.",
+    "author": "A'zana Sculpt",
+    "category": "Consistency"
+  },
+  {
+    "id": 47,
+    "quote": "The body achieves what the mind believes.",
+    "author": "Unknown",
+    "category": "Discipline"
+  },
+  {
+    "id": 48,
+    "quote": "Sculpting is revealing who you've always been.",
+    "author": "A'zana Sculpt",
+    "category": "Transformation"
+  },
+  {
+    "id": 49,
+    "quote": "Pain is temporary. 'What if' lasts forever.",
+    "author": "Unknown",
+    "category": "Strength"
+  },
+  {
+    "id": 50,
+    "quote": "Be the person who decides, not the one who wishes.",
+    "author": "A'zana Sculpt",
+    "category": "Discipline"
+  }
+]
