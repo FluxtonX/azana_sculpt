@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../constants/app_theme.dart';
+import '../../services/database_service.dart';
 
 class WorkoutCompleteScreen extends StatelessWidget {
   final String duration;
   final int exercisesCount;
   final int calories;
+  final String programId;
 
   const WorkoutCompleteScreen({
     super.key,
+    required this.programId,
     this.duration = '45 min',
     this.exercisesCount = 8,
-    this.calories = 320,
+    this.calories = 0,
   });
 
   @override
   Widget build(BuildContext context) {
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
       body: Container(
@@ -24,9 +30,9 @@ class WorkoutCompleteScreen extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFE8A49C), // Gradient Top
-              Color(0xFFE8B8A8), // Gradient Mid
-              Color(0xFF4A90E2), // Transition to blue as seen in screenshot?
+              Color(0xFFE8A49C),
+              Color(0xFFE8B8A8),
+              Color(0xFF4A90E2),
             ],
             stops: [0.0, 0.4, 0.9],
           ),
@@ -35,7 +41,6 @@ class WorkoutCompleteScreen extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: 80),
-              // Trophy Icon Section
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -51,7 +56,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
                 ),
                 child: const Icon(
                   Icons.emoji_events_rounded,
-                  color: Color(0xFF2EDBAA), // Success Teal
+                  color: Color(0xFF2EDBAA),
                   size: 64,
                 ),
               ),
@@ -77,7 +82,6 @@ class WorkoutCompleteScreen extends StatelessWidget {
               ),
               const SizedBox(height: 48),
 
-              // Summary Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(32),
@@ -106,10 +110,10 @@ class WorkoutCompleteScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 48),
-                    _buildWeeklyProgress(),
+                    _buildWeeklyProgress(userId, programId),
                     const SizedBox(height: 32),
                     _buildStreakCard(),
-                    const SizedBox(height: 48), // Replaced Spacer with fixed gap
+                    const SizedBox(height: 48),
                     _buildActionButtons(context),
                   ],
                 ),
@@ -153,42 +157,59 @@ class WorkoutCompleteScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWeeklyProgress() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text(
-              'Weekly Progress',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textMedium,
-              ),
-            ),
-            Text(
-              '5 of 5 completed',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2EDBAA),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: const LinearProgressIndicator(
-            value: 1.0,
-            minHeight: 8,
-            backgroundColor: Color(0xFFE8D5CF),
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2EDBAA)),
-          ),
-        ),
-      ],
+  Widget _buildWeeklyProgress(String userId, String programId) {
+    return StreamBuilder<double>(
+      stream: DatabaseService().getProgramProgressStream(userId, programId),
+      builder: (context, snapshot) {
+        final progress = snapshot.data ?? 0.0;
+        final percent = (progress * 100).toInt();
+
+        // Calculate X of Y
+        return FutureBuilder<int>(
+          future: DatabaseService().getWorkoutsStream(programId).first.then((list) => list.length),
+          builder: (context, totalSnapshot) {
+            final total = totalSnapshot.data ?? 0;
+            final completed = (progress * total).round();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Program Progress',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textMedium,
+                      ),
+                    ),
+                    Text(
+                      '$completed of $total completed',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2EDBAA),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8,
+                    backgroundColor: const Color(0xFFE8D5CF),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2EDBAA)),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -214,9 +235,9 @@ class WorkoutCompleteScreen extends StatelessWidget {
           ),
           SizedBox(height: 12),
           Text(
-            '12 days 🔥',
+            'Keep it up! 🔥',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.w900,
               color: AppTheme.textDark,
             ),
@@ -239,6 +260,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
               foregroundColor: AppTheme.textMedium,
               side: const BorderSide(color: Color(0xFFE8D5CF)),
               elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             child: const Text('Back to Home'),
           ),
@@ -248,14 +270,15 @@ class WorkoutCompleteScreen extends StatelessWidget {
           width: double.infinity,
           height: 60,
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4A90E2),
               foregroundColor: Colors.white,
               elevation: 4,
               shadowColor: const Color(0xFF4A90E2).withOpacity(0.3),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
-            child: const Text('View Progress'),
+            child: const Text('View Workouts'),
           ),
         ),
       ],

@@ -4,6 +4,7 @@ import '../../../constants/app_theme.dart';
 import '../../../models/program_model.dart';
 import '../../../services/database_service.dart';
 import '../../../services/auth_service.dart';
+import 'manage_program_workouts_screen.dart';
 
 class CreateProgramScreen extends StatefulWidget {
   const CreateProgramScreen({super.key});
@@ -48,9 +49,14 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
       await DatabaseService().createProgram(program);
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ManageProgramWorkoutsScreen(program: program),
+          ),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Program created successfully!')),
+          const SnackBar(content: Text('Program created! Now add some workouts.')),
         );
       }
     } catch (e) {
@@ -77,19 +83,39 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
-          child: ListView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Text(
+                'STEP 1: BASIC INFO',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primary,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Define your program',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              const SizedBox(height: 32),
               _buildTextField(
                 label: 'Program Title',
                 controller: _titleController,
                 hint: 'e.g., 90-Day Transformation',
                 validator: (v) => v!.isEmpty ? 'Please enter a title' : null,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               _buildTextField(
                 label: 'Description',
                 controller: _descController,
@@ -97,26 +123,50 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
                 maxLines: 4,
                 validator: (v) => v!.isEmpty ? 'Please enter a description' : null,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               _buildTextField(
                 label: 'Duration',
                 controller: _durationController,
                 hint: 'e.g., 90 days, 12 weeks',
                 validator: (v) => v!.isEmpty ? 'Please enter a duration' : null,
               ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _saveProgram,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: AppTheme.textOnDark,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 48),
+              GestureDetector(
+                onTap: _isLoading ? null : _saveProgram,
+                child: Container(
+                  width: double.infinity,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primary.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Text(
+                            'NEXT: ADD WORKOUTS',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                  ),
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Create Program', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),

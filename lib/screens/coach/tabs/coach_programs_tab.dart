@@ -5,6 +5,7 @@ import '../../../models/program_model.dart';
 import '../../../services/database_service.dart';
 import '../../../services/auth_service.dart';
 import '../create_program_screen.dart';
+import '../manage_program_workouts_screen.dart';
 
 class CoachProgramsTab extends StatefulWidget {
   const CoachProgramsTab({super.key});
@@ -249,10 +250,15 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // TODO: Implement Edit
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ManageProgramWorkoutsScreen(program: program),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.edit_outlined, size: 16),
-                  label: const Text('Edit'),
+                  label: const Text('Manage Workouts'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.surface,
                     foregroundColor: AppTheme.textDark,

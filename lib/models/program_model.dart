@@ -7,6 +7,8 @@ class ProgramModel {
   final String description;
   final String duration; // e.g. "90 days"
   final DateTime createdAt;
+  final String? previewImageUrl;
+  final List<String> tags;
   final String status; // 'active', 'inactive'
 
   ProgramModel({
@@ -16,6 +18,8 @@ class ProgramModel {
     required this.description,
     required this.duration,
     required this.createdAt,
+    this.previewImageUrl,
+    this.tags = const [],
     this.status = 'active',
   });
 
@@ -27,6 +31,8 @@ class ProgramModel {
       'description': description,
       'duration': duration,
       'createdAt': Timestamp.fromDate(createdAt),
+      'previewImageUrl': previewImageUrl,
+      'tags': tags,
       'status': status,
     };
   }
@@ -39,6 +45,8 @@ class ProgramModel {
       description: map['description'] ?? '',
       duration: map['duration'] ?? '',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      previewImageUrl: map['previewImageUrl'],
+      tags: List<String>.from(map['tags'] ?? []),
       status: map['status'] ?? 'active',
     );
   }
@@ -47,6 +55,8 @@ class ProgramModel {
     String? title,
     String? description,
     String? duration,
+    String? previewImageUrl,
+    List<String>? tags,
     String? status,
   }) {
     return ProgramModel(
@@ -56,6 +66,8 @@ class ProgramModel {
       description: description ?? this.description,
       duration: duration ?? this.duration,
       createdAt: createdAt,
+      previewImageUrl: previewImageUrl ?? this.previewImageUrl,
+      tags: tags ?? this.tags,
       status: status ?? this.status,
     );
   }

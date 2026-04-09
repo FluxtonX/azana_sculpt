@@ -6,12 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../../constants/app_theme.dart';
 import '../../models/workout_models.dart';
+import '../../services/database_service.dart';
+import '../../services/auth_service.dart';
 import 'workout_complete_screen.dart';
 
 class WorkoutExecutionScreen extends StatefulWidget {
-  final WorkoutSession? session;
+  final WorkoutSession session;
 
-  const WorkoutExecutionScreen({super.key, this.session});
+  const WorkoutExecutionScreen({super.key, required this.session});
 
   @override
   State<WorkoutExecutionScreen> createState() => _WorkoutExecutionScreenState();
@@ -30,67 +32,40 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
   late AnimationController _pulseController;
   late AnimationController _progressController;
   late Animation<double> _pulseAnim;
+  bool _isFinishing = false;
 
   @override
   void initState() {
     super.initState();
-    _session = widget.session ?? _createMockSession();
+    _session = widget.session;
 
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
-    _progressController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
 
     _pulseAnim = Tween<double>(begin: 1.0, end: 1.06).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
+    // Safety check for empty exercises
+    if (_session.exercises.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This workout has no exercises yet.')),
+        );
+        Navigator.pop(context);
+      });
+    }
   }
 
-  @override
-  void dispose() {
-    _restTimer?.cancel();
-    _pulseController.dispose();
-    _progressController.dispose();
-    super.dispose();
-  }
-
-  WorkoutSession _createMockSession() {
-    return WorkoutSession(
-      title: 'Upper Body Strength',
-      totalDuration: '45 min',
-      caloriesBurned: 320,
-      exercises: [
-        ExerciseModel(
-          name: 'Bench Press',
-          instruction: 'Control the descent and explode up. Keep your core braced.',
-          sets: 4,
-          reps: '8-10',
-          restSeconds: 90,
-          videoUrl: 'assets/videos/bench_press.mp4',
-        ),
-        ExerciseModel(
-          name: 'Dumbbell Row',
-          instruction: 'Drive your elbow back, squeeze at the top for 1 second.',
-          sets: 3,
-          reps: '10-12',
-          restSeconds: 60,
-          videoUrl: 'assets/videos/dumbbell_press.mp4',
-        ),
-        ExerciseModel(
-          name: 'Shoulder Press',
-          instruction: 'Press overhead with full arm extension. Don\'t flare the elbows.',
-          sets: 3,
-          reps: '8-10',
-          restSeconds: 75,
-          videoUrl: 'assets/videos/dumbbell_press.mp4',
-        ),
-      ],
-    );
-  }
-
-  ExerciseModel get _currentExercise => _session.exercises[_currentExerciseIndex];
+  ExerciseModel get _currentExercise =>
+      _session.exercises[_currentExerciseIndex];
 
   ExerciseModel? get _nextExercise {
     // Next set of same exercise
@@ -140,11 +115,54 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
     });
   }
 
-  void _finishWorkout() {
+  void _previousExerciseOrSet() {
+    _restTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _isResting = false;
+      if (_currentSetIndex > 0) {
+        _currentSetIndex--;
+      } else if (_currentExerciseIndex > 0) {
+        _currentExerciseIndex--;
+        _currentSetIndex = _session.exercises[_currentExerciseIndex].sets - 1;
+      }
+    });
+  }
+
+  Future<void> _finishWorkout() async {
+    if (_isFinishing) return;
+
+    setState(() => _isFinishing = true);
+
+    try {
+      final user = AuthService().currentUser;
+      if (user != null) {
+        // We set a timeout to ensure navigation happens even if network is slow
+        await DatabaseService()
+            .completeWorkout(
+          userId: user.uid,
+          programId: _session.programId,
+          workoutId: _session.id,
+          workoutTitle: _session.title,
+          duration: _session.totalDuration,
+          exercisesCount: _session.exercises.length,
+          calories: _session.caloriesBurned,
+        )
+            .timeout(const Duration(seconds: 5), onTimeout: () {
+          debugPrint('Workout sync timed out, continuing to completion screen');
+        });
+      }
+    } catch (e) {
+      debugPrint('Error completing workout: $e');
+    }
+
+    if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => WorkoutCompleteScreen(
+          programId: _session.programId,
           duration: _session.totalDuration,
           exercisesCount: _session.exercises.length,
           calories: _session.caloriesBurned,
@@ -157,6 +175,14 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
     double p = _currentExerciseIndex / _session.exercises.length;
     p += (_currentSetIndex / _currentExercise.sets) / _session.exercises.length;
     return p.clamp(0.0, 1.0);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _progressController.dispose();
+    _restTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -180,7 +206,8 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
                   const SizedBox(height: 36),
                   if (_isResting) _buildRestCard() else _buildSetsTracking(),
                   const SizedBox(height: 28),
-                  if (!_isResting && _nextExercise != null) _buildNextExercisePreview(),
+                  if (!_isResting && _nextExercise != null)
+                    _buildNextExercisePreview(),
                   const SizedBox(height: 36),
                   _buildActionButtons(),
                   const SizedBox(height: 40),
@@ -210,7 +237,8 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
             child: _isResting || _currentExercise.videoUrl == null
                 ? AnimatedBuilder(
                     animation: _pulseAnim,
-                    builder: (_, child) => Transform.scale(scale: _pulseAnim.value, child: child),
+                    builder: (_, child) =>
+                        Transform.scale(scale: _pulseAnim.value, child: child),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -228,11 +256,17 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 44),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 44,
+                          ),
                         ),
                         const SizedBox(height: 14),
                         Text(
-                          _isResting ? 'Rest & Recover 💆‍♀️' : 'Demo Placeholder',
+                          _isResting
+                              ? 'Rest & Recover 💆‍♀️'
+                              : 'Demo Placeholder',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
@@ -246,7 +280,9 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
                     fit: StackFit.expand,
                     children: [
                       _VideoPlayerHero(videoUrl: _currentExercise.videoUrl!),
-                      Container(color: Colors.black.withOpacity(0.25)), // Subtle dark fade
+                      Container(
+                        color: Colors.black.withOpacity(0.25),
+                      ), // Subtle dark fade
                     ],
                   ),
           ),
@@ -262,7 +298,10 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
                   onTap: () => Navigator.pop(context),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -378,7 +417,9 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
         const SizedBox(width: 12),
         Expanded(child: _buildMetadataCard('REPS', _currentExercise.reps)),
         const SizedBox(width: 12),
-        Expanded(child: _buildMetadataCard('REST', '${_currentExercise.restSeconds}s')),
+        Expanded(
+          child: _buildMetadataCard('REST', '${_currentExercise.restSeconds}s'),
+        ),
       ],
     );
   }
@@ -433,7 +474,10 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
             ),
             if (_isLastSetOfLastExercise)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.accent.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
@@ -458,16 +502,19 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 height: 7,
-                margin: EdgeInsets.only(right: index == _currentExercise.sets - 1 ? 0 : 8),
+                margin: EdgeInsets.only(
+                  right: index == _currentExercise.sets - 1 ? 0 : 8,
+                ),
                 decoration: BoxDecoration(
                   gradient: isDone
                       ? const LinearGradient(
-                          colors: [Color(0xFF2EDBAA), Color(0xFF2EB87D)])
+                          colors: [Color(0xFF2EDBAA), Color(0xFF2EB87D)],
+                        )
                       : null,
                   color: !isDone
                       ? isActive
-                          ? AppTheme.primary
-                          : Colors.white.withOpacity(0.1)
+                            ? AppTheme.primary
+                            : Colors.white.withOpacity(0.1)
                       : null,
                   borderRadius: BorderRadius.circular(4),
                   boxShadow: isActive
@@ -475,7 +522,7 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
                           BoxShadow(
                             color: AppTheme.primary.withOpacity(0.4),
                             blurRadius: 8,
-                          )
+                          ),
                         ]
                       : null,
                 ),
@@ -567,9 +614,7 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
     if (next == null) return const SizedBox.shrink();
 
     final isNextSet = next.name == _currentExercise.name;
-    final label = isNextSet
-        ? 'Next: Set ${_currentSetIndex + 2}'
-        : 'Up next';
+    final label = isNextSet ? 'Next: Set ${_currentSetIndex + 2}' : 'Up next';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -586,7 +631,11 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
               color: AppTheme.accent.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.skip_next_rounded, color: AppTheme.accent, size: 20),
+            child: const Icon(
+              Icons.skip_next_rounded,
+              color: AppTheme.accent,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -640,20 +689,26 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
     final buttonText = _isResting
         ? 'Skip Rest'
         : isFinish
-            ? 'Finish Workout 🏆'
-            : 'Complete Set ${_currentSetIndex + 1}';
+        ? 'Finish Workout 🏆'
+        : 'Complete Set ${_currentSetIndex + 1}';
 
     final buttonGradient = _isResting
         ? LinearGradient(
-            colors: [Colors.white.withOpacity(0.08), Colors.white.withOpacity(0.08)])
+            colors: [
+              Colors.white.withOpacity(0.08),
+              Colors.white.withOpacity(0.08),
+            ],
+          )
         : isFinish
-            ? const LinearGradient(colors: [AppTheme.accent, AppTheme.primary])
-            : AppTheme.primaryGradient;
+        ? const LinearGradient(colors: [AppTheme.accent, AppTheme.primary])
+        : AppTheme.primaryGradient;
 
     return Column(
       children: [
         GestureDetector(
-          onTap: _isResting ? _skipRest : _startRest,
+          onTap: _isResting
+              ? _skipRest
+              : (isFinish ? _finishWorkout : _startRest),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             width: double.infinity,
@@ -661,33 +716,42 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
             decoration: BoxDecoration(
               gradient: buttonGradient,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: _isResting
-                  ? []
-                  : [
-
-                    ],
+              boxShadow: _isResting ? [] : [],
             ),
             child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!_isResting)
-                    Icon(
-                      isFinish ? Icons.emoji_events_rounded : Icons.check_rounded,
-                      size: 24,
-                      color: isFinish ? Colors.white : Colors.black87,
+              child: _isFinishing
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!_isResting)
+                          Icon(
+                            isFinish
+                                ? Icons.emoji_events_rounded
+                                : Icons.check_rounded,
+                            size: 24,
+                            color: isFinish ? Colors.white : Colors.black87,
+                          ),
+                        if (!_isResting) const SizedBox(width: 10),
+                        Text(
+                          buttonText,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: _isResting
+                                ? Colors.white60
+                                : (isFinish ? Colors.white : Colors.black87),
+                          ),
+                        ),
+                      ],
                     ),
-                  if (!_isResting) const SizedBox(width: 10),
-                  Text(
-                    buttonText,
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      color: _isResting ? Colors.white60 : (isFinish ? Colors.white : Colors.black87),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ),
@@ -695,9 +759,19 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _buildSecondaryButton(Icons.arrow_back_rounded, 'Previous')),
+              Expanded(
+                child: _buildSecondaryButton(
+                  Icons.arrow_back_rounded,
+                  'Previous',
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _buildSecondaryButton(Icons.skip_next_rounded, 'Skip Set')),
+              Expanded(
+                child: _buildSecondaryButton(
+                  Icons.skip_next_rounded,
+                  'Skip Set',
+                ),
+              ),
             ],
           ),
         ],
@@ -709,10 +783,14 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen>
     return SizedBox(
       height: 52,
       child: OutlinedButton(
-        onPressed: text == 'Skip Set' ? _skipRest : () {},
+        onPressed: text == 'Skip Set'
+            ? _skipRest
+            : (text == 'Previous' ? _previousExerciseOrSet : () {}),
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: Colors.white.withOpacity(0.1)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -804,17 +882,36 @@ class _VideoPlayerHeroState extends State<_VideoPlayerHero> {
 
   void _initVideo() {
     _initialized = false;
-    _controller = VideoPlayerController.asset(widget.videoUrl)
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() {
-            _initialized = true;
-          });
-          _controller.setLooping(true);
-          _controller.setVolume(0); // silent
-          _controller.play();
-        }
-      });
+    final isNetwork = widget.videoUrl.startsWith('http');
+
+    if (isNetwork) {
+      _controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.videoUrl),
+      );
+    } else {
+      _controller = VideoPlayerController.asset(widget.videoUrl);
+    }
+
+    _controller
+        .initialize()
+        .then((_) {
+          if (mounted) {
+            setState(() {
+              _initialized = true;
+            });
+            _controller.setLooping(true);
+            _controller.setVolume(0); // silent
+            _controller.play();
+          }
+        })
+        .catchError((error) {
+          debugPrint('Error initializing video: $error');
+          if (mounted) {
+            setState(() {
+              _initialized = false; // Will show fallback UI
+            });
+          }
+        });
   }
 
   @override
@@ -826,7 +923,9 @@ class _VideoPlayerHeroState extends State<_VideoPlayerHero> {
   @override
   Widget build(BuildContext context) {
     if (!_initialized) {
-      return const Center(child: CircularProgressIndicator(color: Colors.white54));
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white54),
+      );
     }
     return SizedBox.expand(
       child: FittedBox(

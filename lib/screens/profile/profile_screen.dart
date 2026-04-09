@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:azana_sculpt/screens/messages/messages_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,7 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadLocalImage() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    
+
     final prefs = await SharedPreferences.getInstance();
     final imagePath = prefs.getString('client_profile_image_$uid');
     if (imagePath != null && File(imagePath).existsSync()) {
@@ -57,7 +58,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final User? currentUser = AuthService().currentUser;
@@ -77,12 +77,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 48,
+                    ),
                     const SizedBox(height: 16),
-                    Text('Error: ${snapshot.error}', textAlign: TextAlign.center),
+                    Text(
+                      'Error: ${snapshot.error}',
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+                      onPressed: () =>
+                          Navigator.pushReplacementNamed(context, '/home'),
                       child: const Text('Back to Home'),
                     ),
                   ],
@@ -93,7 +101,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         final user = snapshot.data;
@@ -129,7 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         _buildProfileInfoCard(user),
                         const SizedBox(height: 24),
-                        if (_unlockedBadges.isNotEmpty) ...[  
+                        if (_unlockedBadges.isNotEmpty) ...[
                           _buildBadgesPreviewRow(context),
                           const SizedBox(height: 24),
                         ],
@@ -150,14 +160,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader(UserModel? user) {
-    final avatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(user?.fullName ?? 'User')}&background=random&color=fff';
+    final avatarUrl =
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(user?.fullName ?? 'User')}&background=random&color=fff';
 
     return Container(
       width: double.infinity,
       height: 280,
-      decoration: const BoxDecoration(
-        gradient: AppTheme.primaryGradient,
-      ),
+      decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -170,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: CircleAvatar(
               radius: 45,
               backgroundColor: Colors.white,
-              backgroundImage: _localImageFile != null 
+              backgroundImage: _localImageFile != null
                   ? FileImage(_localImageFile!) as ImageProvider
                   : NetworkImage(avatarUrl),
             ),
@@ -227,9 +236,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatItem(Icons.fitness_center_rounded, user?.activityLevel?.split(' ')[0] ?? 'Active', 'Level'),
-              _buildStatItem(Icons.track_changes_rounded, '${user?.weight ?? "0"}${user?.weightUnit ?? "kg"}', 'Current'),
-              _buildStatItem(Icons.local_fire_department_rounded, '$_streakCount${_streakCount >= 7 ? " 🔥" : ""}', 'Streak'),
+              _buildStatItem(
+                Icons.fitness_center_rounded,
+                user?.activityLevel?.split(' ')[0] ?? 'Active',
+                'Level',
+              ),
+              _buildStatItem(
+                Icons.track_changes_rounded,
+                '${user?.weight ?? "0"}${user?.weightUnit ?? "kg"}',
+                'Current',
+              ),
+              _buildStatItem(
+                Icons.local_fire_department_rounded,
+                '$_streakCount${_streakCount >= 7 ? " 🔥" : ""}',
+                'Streak',
+              ),
             ],
           ),
         ],
@@ -261,10 +282,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Text(
           label,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppTheme.textLight,
-          ),
+          style: const TextStyle(fontSize: 11, color: AppTheme.textLight),
         ),
       ],
     );
@@ -299,9 +317,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 24),
           _buildInfoRow('Age Range', user?.ageRange ?? 'Not set'),
           const Divider(height: 32),
-          _buildInfoRow('Height', '${user?.height ?? "-"} ${user?.heightUnit ?? "cm"}'),
+          _buildInfoRow(
+            'Height',
+            '${user?.height ?? "-"} ${user?.heightUnit ?? "cm"}',
+          ),
           const Divider(height: 32),
-          _buildInfoRow('Current Weight', '${user?.weight ?? "-"} ${user?.weightUnit ?? "kg"}'),
+          _buildInfoRow(
+            'Current Weight',
+            '${user?.weight ?? "-"} ${user?.weightUnit ?? "kg"}',
+          ),
           const SizedBox(height: 24),
           const Text(
             'Primary Goal',
@@ -317,7 +341,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             runSpacing: 8,
             children: [
               if (user?.fitnessGoal != null) _buildGoalTag(user!.fitnessGoal!),
-              if (user?.coachingPreference != null) _buildGoalTag('Coaching Requested'),
+              if (user?.coachingPreference != null)
+                _buildGoalTag('Coaching Requested'),
             ],
           ),
         ],
@@ -468,19 +493,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         children: [
           _buildMenuItem(
-            Icons.person_outline_rounded, 
-            'Edit Profile', 
+            Icons.person_outline_rounded,
+            'Edit Profile',
             onTap: () async {
               if (user != null) {
                 await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => ClientEditProfileScreen(user: user)),
+                  MaterialPageRoute(
+                    builder: (_) => ClientEditProfileScreen(user: user),
+                  ),
                 );
                 _loadLocalImage();
               }
             },
           ),
-          _buildMenuItem(Icons.track_changes_rounded, 'Goals & Preferences', onTap: () {}),
+          StreamBuilder<int>(
+            stream: (user?.role == 'coach')
+                ? DatabaseService().getUnreadMessagesCountStream(user!.uid)
+                : (user?.coachId != null)
+                    ? DatabaseService().getChatUnreadCountStream('${user!.uid}_${user!.coachId}', user!.uid)
+                    : Stream.value(0),
+            builder: (context, snapshot) {
+              final unreadCount = snapshot.data ?? 0;
+              return _buildMenuItem(
+                'assets/icons/message.png',
+                'Messages',
+                badgeCount: unreadCount,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MessagesScreen(isActive: true)),
+                  );
+                },
+              );
+            },
+          ),
+          _buildMenuItem(
+            Icons.track_changes_rounded,
+            'Goals & Preferences',
+            onTap: () {},
+          ),
           _buildMenuItem(
             Icons.emoji_events_rounded,
             'Achievements',
@@ -522,16 +574,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildMenuItem(
-    IconData icon,
+    dynamic icon,
     String title, {
     bool isTrailing = true,
     Color iconColor = AppTheme.textDark,
     Color textColor = AppTheme.textDark,
+    int? badgeCount,
     required VoidCallback onTap,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-      leading: Icon(icon, color: iconColor, size: 22),
+      leading: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          _buildLeadingIcon(icon, iconColor),
+          if (badgeCount != null && badgeCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.redAccent,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 16,
+                  minHeight: 16,
+                ),
+                child: Center(
+                  child: Text(
+                    '$badgeCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
       title: Text(
         title,
         style: TextStyle(
@@ -540,9 +624,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: textColor,
         ),
       ),
-      trailing: isTrailing ? const Icon(Icons.chevron_right_rounded, color: AppTheme.textLight) : null,
+      trailing: isTrailing
+          ? const Icon(Icons.chevron_right_rounded, color: AppTheme.textLight)
+          : null,
       onTap: onTap,
     );
+  }
+
+  Widget _buildLeadingIcon(dynamic icon, Color color) {
+    if (icon is IconData) {
+      return Icon(icon, color: color, size: 22);
+    } else if (icon is String) {
+      return Image.asset(
+        icon,
+        width: 22,
+        height: 22,
+        color: color,
+      );
+    }
+    return const SizedBox(width: 22, height: 22);
   }
 
   Widget _buildPremiumCard() {
@@ -592,7 +692,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+                  child: const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
                 ),
               ],
             ),

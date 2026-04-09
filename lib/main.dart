@@ -1,4 +1,4 @@
-import 'package:device_preview/device_preview.dart';
+// import 'package:device_preview/device_preview.dart';
 import 'package:azana_sculpt/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -30,12 +30,13 @@ void main() async {
     ),
   );
 
-  runApp(
-    DevicePreview(
-      enabled: !kReleaseMode,
-      builder: (context) => const AzanaSculptApp(),
-    ),
-  );
+  runApp(const AzanaSculptApp());
+//   runApp(
+//     DevicePreview(
+//       enabled: !kReleaseMode,
+//       builder: (context) => const AzanaSculptApp(),
+//     ),
+//   );
 }
 
 class AzanaSculptApp extends StatelessWidget {
@@ -44,9 +45,9 @@ class AzanaSculptApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      useInheritedMediaQuery: true,
-      locale: DevicePreview.locale(context),
-      builder: DevicePreview.appBuilder,
+      // useInheritedMediaQuery: true,
+      // locale: DevicePreview.locale(context),
+      // builder: DevicePreview.appBuilder,
       title: 'Azana Sculpt',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
