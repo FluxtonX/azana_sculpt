@@ -28,8 +28,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (_emailController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty) {
+    if (_emailController.text
+        .trim()
+        .isEmpty ||
+        _passwordController.text
+            .trim()
+            .isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter both email and password')),
       );
@@ -85,7 +89,10 @@ class _LoginScreenState extends State<LoginScreen> {
             // ── Header ──
             Container(
               width: double.infinity,
-              height: MediaQuery.of(context).size.height * 0.4,
+              height: MediaQuery
+                  .of(context)
+                  .size
+                  .height * 0.4,
               decoration: const BoxDecoration(
                 gradient: AppTheme.splashGradient,
               ),
@@ -121,16 +128,23 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 24),
                     Text(
                       'Welcome Back',
-                      style: Theme.of(context).textTheme.headlineMedium
+                      style: Theme
+                          .of(context)
+                          .textTheme
+                          .headlineMedium
                           ?.copyWith(
-                            color: AppTheme.textDark,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        color: AppTheme.textDark,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Sign in to continue your journey',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: Theme
+                          .of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(
                         color: AppTheme.textMedium,
                       ),
                     ),
@@ -192,9 +206,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           _isLoading
                               ? const CircularProgressIndicator()
                               : AppButton(
-                                  text: 'Sign In',
-                                  onPressed: _handleLogin,
-                                ),
+                            text: 'Sign In',
+                            onPressed: _handleLogin,
+                          ),
                           const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -228,42 +242,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
-                    // ── Quick Login Section ──
-                    const Text(
-                      'Quick Login:',
-                      style: TextStyle(
-                        color: AppTheme.textLight,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildQuickLoginButton('Client', () {
-                            _emailController.text = 'client@example.com';
-                            _passwordController.text = 'password123';
-                            _handleLogin();
-                          }),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildQuickLoginButton('Coach', () {
-                            _emailController.text = 'coach@example.com';
-                            _passwordController.text = 'password123';
-                            _handleLogin();
-                          }),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildQuickLoginButton('Admin', () {
-                            // Admin flow maybe later
-                          }),
-                        ),
-                      ],
-                    ),
+
+
                   ],
                 ),
               ),
@@ -275,23 +255,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildQuickLoginButton(String label, VoidCallback onTap) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        side: const BorderSide(color: AppTheme.divider),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        backgroundColor: Colors.grey.withOpacity(0.03),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: AppTheme.textDark,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
 }

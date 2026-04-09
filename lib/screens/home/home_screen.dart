@@ -14,6 +14,7 @@ import '../../widgets/streak_banner.dart';
 import '../../widgets/daily_motivation_card.dart';
 import '../../widgets/animated_progress_bar.dart';
 import '../../widgets/community_proof_strip.dart';
+import '../messages/messages_screen.dart';
 import '../workouts/workouts_screen.dart';
 import '../workouts/workout_execution_screen.dart';
 import '../programs/program_details_screen.dart';
@@ -41,21 +42,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Stream<UserModel?>? _userStream;
   Stream<List<ProgramModel>>? _programStream;
   String? _lastCoachId;
-  
-  // Cache for workout streams
-  final Map<String, Stream<WorkoutSession?>> _workoutStreamCache = {};
 
-  void _markMessagesAsRead() async {
-    final uid = AuthService().currentUser?.uid;
-    if (uid == null) return;
-    
-    // Get user profile to find coachId
-    final user = await DatabaseService().getUserProfile(uid);
-    if (user != null && user.coachId != null) {
-      final chatId = '${user.uid}_${user.coachId}';
-      await DatabaseService().markMessagesAsRead(chatId, user.uid);
-    }
-  }
+  // Cache for workout streams
 
   StreakModel _streak = const StreakModel();
   bool _streakLoaded = false;
@@ -70,11 +58,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
-    _headerFade = CurvedAnimation(parent: _headerController, curve: Curves.easeOut);
+    _headerFade = CurvedAnimation(
+      parent: _headerController,
+      curve: Curves.easeOut,
+    );
     _headerController.forward();
     _initStreakAndBadges();
     _loadLocalImage();
-    
+
     // Initialize user stream once
     final uid = AuthService().currentUser?.uid ?? '';
     _userStream = DatabaseService().userProfileStream(uid);
@@ -83,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _loadLocalImage() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    
+
     final prefs = await SharedPreferences.getInstance();
     final imagePath = prefs.getString('client_profile_image_$uid');
     if (imagePath != null && File(imagePath).existsSync()) {
@@ -100,7 +91,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     // Load from cache first (instant)
     final cached = await StreakService().loadStreak();
-    if (mounted) setState(() { _streak = cached; _streakLoaded = true; });
+    if (mounted) {
+      setState(() {
+        _streak = cached;
+        _streakLoaded = true;
+      });
+    }
 
     if (uid != null) {
       // Update streak in background
@@ -108,7 +104,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (mounted) setState(() => _streak = updated);
 
       // Check for new badges
-      final newBadges = await BadgeService().checkAndUnlockBadges(uid, updated.currentStreak);
+      final newBadges = await BadgeService().checkAndUnlockBadges(
+        uid,
+        updated.currentStreak,
+      );
       if (newBadges.isNotEmpty && mounted) {
         _showBadgeUnlockDialog(newBadges.first);
       }
@@ -152,17 +151,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       stream: _userStream,
       builder: (context, userSnapshot) {
         final coachId = userSnapshot.data?.coachId;
-        
+
         // Stabilize program stream
         if (_programStream == null || coachId != _lastCoachId) {
           _lastCoachId = coachId;
-          _programStream = DatabaseService().getAllProgramsStream(coachId: coachId);
+          _programStream = DatabaseService().getAllProgramsStream(
+            coachId: coachId,
+          );
         }
 
         return StreamBuilder<ProgramModel?>(
-          stream: userSnapshot.data == null 
-              ? Stream.value(null) 
-              : DatabaseService().getActiveProgramStream(userSnapshot.data!.uid, coachId),
+          stream: userSnapshot.data == null
+              ? Stream.value(null)
+              : DatabaseService().getActiveProgramStream(
+                  userSnapshot.data!.uid,
+                  coachId,
+                ),
           builder: (context, activeProgramSnapshot) {
             final activeProgram = activeProgramSnapshot.data;
 
@@ -192,14 +196,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ],
                       ),
                     ),
-      
+
                     // ── Content Below Header ──
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
                         children: [
                           const SizedBox(height: 10),
-      
+
                           // Streak Banner
                           if (_streakLoaded)
                             Padding(
@@ -211,22 +215,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             )
                           else
                             const SizedBox(height: 20),
-      
+
                           _buildStatsRow(),
                           const SizedBox(height: 16),
-      
+
                           // Community proof strip
                           const Align(
                             alignment: Alignment.centerLeft,
                             child: CommunityProofStrip(),
                           ),
                           const SizedBox(height: 24),
-      
+
                           _buildWeeklyProgressCard(),
                           const SizedBox(height: 24),
                           _buildCoachMessageCard(),
                           const SizedBox(height: 24),
-      
+
                           // Dynamic motivation card
                           const DailyMotivationCard(),
                           const SizedBox(height: 40),
@@ -246,20 +250,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildHeader(UserModel? profile) {
     final user = FirebaseAuth.instance.currentUser;
     // Check profile fullName first, then Firebase Auth displayName
-    final name = (profile?.fullName != null && profile!.fullName!.isNotEmpty) 
-        ? profile.fullName 
+    final name = (profile?.fullName != null && profile!.fullName!.isNotEmpty)
+        ? profile.fullName
         : user?.displayName;
-        
-    final displayName = (name != null && name.isNotEmpty) 
-        ? name.split(' ').first 
+
+    final displayName = (name != null && name.isNotEmpty)
+        ? name.split(' ').first
         : 'there';
     final hour = DateTime.now().hour;
-    final greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-    
-    final nameForAvatar = (name != null && name.isNotEmpty) 
-        ? name 
-        : 'User';
-    final avatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nameForAvatar)}&background=random&color=fff';
+    final greeting = hour < 12
+        ? 'Good morning'
+        : hour < 17
+        ? 'Good afternoon'
+        : 'Good evening';
+
+    final nameForAvatar = (name != null && name.isNotEmpty) ? name : 'User';
+    final avatarUrl =
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(nameForAvatar)}&background=random&color=fff';
 
     return FadeTransition(
       opacity: _headerFade,
@@ -267,9 +274,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         width: double.infinity,
         height: 215,
         padding: const EdgeInsets.fromLTRB(24, 60, 24, 0),
-        decoration: const BoxDecoration(
-          gradient: AppTheme.splashGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.splashGradient),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -334,7 +339,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               color: AppTheme.primary.withOpacity(0.1),
                               alignment: Alignment.center,
                               child: Text(
-                                nameForAvatar.isNotEmpty ? nameForAvatar[0].toUpperCase() : 'U',
+                                nameForAvatar.isNotEmpty
+                                    ? nameForAvatar[0].toUpperCase()
+                                    : 'U',
                                 style: const TextStyle(
                                   color: AppTheme.primary,
                                   fontWeight: FontWeight.bold,
@@ -365,11 +372,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       stream: DatabaseService().getNextWorkoutStream(userId, program.id),
       builder: (context, snapshot) {
         final workout = snapshot.data;
-        
+
         // If all workouts are done, check if we should show a completion message or the last workout
         final title = workout?.title ?? "Program Complete! 🎉";
         final exerciseCount = workout?.exercises.length ?? 0;
-        final subtitle = workout != null 
+        final subtitle = workout != null
             ? '$exerciseCount Exercises • ${workout.totalDuration}'
             : "You have finished all sessions in this program.";
         final duration = workout?.totalDuration ?? "--";
@@ -416,15 +423,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
                         decoration: BoxDecoration(
                           gradient: AppTheme.primaryGradient,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.access_time_rounded,
-                                size: 12, color: Colors.white),
+                            const Icon(
+                              Icons.access_time_rounded,
+                              size: 12,
+                              color: Colors.white,
+                            ),
                             const SizedBox(width: 5),
                             Text(
                               duration,
@@ -456,13 +469,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textLight),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textLight,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   // Dynamic progress bar linked to database
                   StreamBuilder<double>(
                     stream: DatabaseService().getProgramProgressStream(
-                        FirebaseAuth.instance.currentUser!.uid, program.id),
+                      FirebaseAuth.instance.currentUser!.uid,
+                      program.id,
+                    ),
                     builder: (context, progressSnapshot) {
                       final progress = progressSnapshot.data ?? 0.0;
                       return Column(
@@ -472,7 +490,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           const SizedBox(height: 6),
                           Text(
                             "${(progress * 100).toInt()}% of program complete",
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textLight),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textLight,
+                            ),
                           ),
                         ],
                       );
@@ -487,7 +509,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => WorkoutExecutionScreen(session: workout),
+                              builder: (context) =>
+                                  WorkoutExecutionScreen(session: workout),
                             ),
                           );
                         } else {
@@ -495,7 +518,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ProgramDetailsScreen(program: program),
+                              builder: (context) =>
+                                  ProgramDetailsScreen(program: program),
                             ),
                           );
                         }
@@ -516,8 +540,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.play_arrow_rounded,
-                                size: 22, color: Colors.white),
+                            const Icon(
+                              Icons.play_arrow_rounded,
+                              size: 22,
+                              color: Colors.white,
+                            ),
                             const SizedBox(width: 8),
                             const Text(
                               'Start Workout',
@@ -552,11 +579,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       child: Column(
         children: [
-          const Icon(Icons.fitness_center_rounded, size: 48, color: AppTheme.textLight),
+          const Icon(
+            Icons.fitness_center_rounded,
+            size: 48,
+            color: AppTheme.textLight,
+          ),
           const SizedBox(height: 16),
           const Text(
             'No Active Program',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textDark,
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -595,8 +630,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildStatCard(IconData icon, String value, String label,
-      Color bgColor, Color iconColor) {
+  Widget _buildStatCard(
+    IconData icon,
+    String value,
+    String label,
+    Color bgColor,
+    Color iconColor,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -684,7 +724,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFEEFAF6),
                   borderRadius: BorderRadius.circular(10),
@@ -701,7 +744,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
           const SizedBox(height: 20),
-          const AnimatedProgressBar(value: 0.8, height: 10, duration: Duration(milliseconds: 1200)),
+          const AnimatedProgressBar(
+            value: 0.8,
+            height: 10,
+            duration: Duration(milliseconds: 1200),
+          ),
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -735,7 +782,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   color: AppTheme.primary.withOpacity(0.25),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
-                )
+                ),
               ]
             : null,
       ),
@@ -801,7 +848,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   shape: BoxShape.circle,
                 ),
                 child: const Text(
-                   '1',
+                  '1',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
@@ -823,7 +870,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 20),
           _PressableButton(
-            onPressed: () => setState(() => _currentIndex = 3),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MessagesScreen()),
+              );
+            },
+
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
@@ -847,21 +900,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildBottomNavigationBar() {
     final uid = AuthService().currentUser?.uid ?? '';
-    
+
     return StreamBuilder<UserModel?>(
       stream: DatabaseService().userProfileStream(uid),
       builder: (context, userSnapshot) {
         final user = userSnapshot.data;
-        
+
         return StreamBuilder<int>(
           stream: (user?.role == 'coach')
               ? DatabaseService().getUnreadMessagesCountStream(uid)
               : (user?.coachId != null)
-                  ? DatabaseService().getChatUnreadCountStream('${uid}_${user!.coachId}', uid)
-                  : Stream.value(0),
+              ? DatabaseService().getChatUnreadCountStream(
+                  '${uid}_${user!.coachId}',
+                  uid,
+                )
+              : Stream.value(0),
           builder: (context, countSnapshot) {
             final unreadCount = countSnapshot.data ?? 0;
-            
+
             return Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -886,17 +942,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 elevation: 0,
                 selectedItemColor: AppTheme.primary,
                 unselectedItemColor: AppTheme.textLight,
-                selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
-                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+                selectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 11,
+                ),
                 items: [
                   BottomNavigationBarItem(
                     icon: _buildNavIcon('assets/icons/home.png', false),
                     activeIcon: _buildNavIcon('assets/icons/home.png', true),
                     label: 'Home',
                   ),
+
                   BottomNavigationBarItem(
-                    icon: _buildNavIcon('assets/icons/workout&program.png', false),
-                    activeIcon: _buildNavIcon('assets/icons/workout&program.png', true),
+                    icon: _buildNavIcon('assets/icons/workout.png', false),
+                    activeIcon: _buildNavIcon('assets/icons/workout.png', true),
                     label: 'Workouts',
                   ),
                   BottomNavigationBarItem(
@@ -906,7 +969,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   BottomNavigationBarItem(
                     icon: _buildNavIcon('assets/icons/progress.png', false),
-                    activeIcon: _buildNavIcon('assets/icons/progress.png', true),
+                    activeIcon: _buildNavIcon(
+                      'assets/icons/progress.png',
+                      true,
+                    ),
                     label: 'Progress',
                   ),
                   BottomNavigationBarItem(
@@ -990,10 +1056,7 @@ class _PressableButtonState extends State<_PressableButton>
         widget.onPressed();
       },
       onTapCancel: () => _controller.forward(),
-      child: ScaleTransition(
-        scale: _scale,
-        child: widget.child,
-      ),
+      child: ScaleTransition(scale: _scale, child: widget.child),
     );
   }
 }
@@ -1046,10 +1109,21 @@ class _BadgeUnlockDialog extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 15,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
-              child: const Text('Awesome!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Awesome!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),

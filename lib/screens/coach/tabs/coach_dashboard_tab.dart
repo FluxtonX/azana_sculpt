@@ -6,6 +6,10 @@ import '../../../services/database_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../models/user_model.dart';
 import '../../../models/program_model.dart';
+import '../add_client_screen.dart';
+import '../create_program_screen.dart';
+import 'coach_messages_tab.dart';
+import 'coach_programs_tab.dart';
 
 class CoachDashboardTab extends StatefulWidget {
   const CoachDashboardTab({super.key});
@@ -328,9 +332,23 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _actionCardText('+', 'Add Client')),
+                Expanded(
+                  child: _actionCardText('+', 'Add Client', onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AddClientScreen()),
+                    );
+                  }),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: _actionCardText('+', 'Create Program')),
+                Expanded(
+                  child: _actionCardText('+', 'Create Program', onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CreateProgramScreen()),
+                    );
+                  }),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -340,13 +358,25 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
                   child: _actionCardIcon(
                     Icons.chat_bubble_outline_rounded,
                     'Messages',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CoachMessagesTab(showBackButton: true)),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _actionCardIcon(
-                    Icons.trending_up, // Using trending_up for the graph icon
-                    'Upload Content',
+                    Icons.assignment_outlined,
+                    'Programs',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CoachProgramsTab(showBackButton: true)),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -358,14 +388,12 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
   }
 
   /// Quick action card with "+" text symbol
-  Widget _actionCardText(String symbol, String label) {
+  Widget _actionCardText(String symbol, String label, {VoidCallback? onTap}) {
     return Material(
-      color: const Color(
-        0xFFF8F9FA,
-      ), // Subtle off-white to stand out from white container
+      color: const Color(0xFFF8F9FA),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -403,12 +431,12 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
   }
 
   /// Quick action card with icon styled properly
-  Widget _actionCardIcon(IconData icon, String label) {
+  Widget _actionCardIcon(IconData icon, String label, {VoidCallback? onTap}) {
     return Material(
-      color: const Color(0xFFF8F9FA), // Subtle off-white
+      color: const Color(0xFFF8F9FA),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20),

@@ -29,8 +29,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _isSubmitting = false;
 
   // Step 1 Data
-  final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   String? _selectedAgeRange;
 
@@ -52,6 +50,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? _selectedSleepQuality;
 
   // Step 5 Data
+  String? _selectedFitnessGoal;
   final TextEditingController _fitnessGoalController = TextEditingController();
   final TextEditingController _bodyVisionController = TextEditingController();
   double _commitmentLevel = 5;
@@ -87,8 +86,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
         final userData = UserModel(
           uid: user.uid,
-          email: user.email ?? _emailController.text.trim(),
-          fullName: _fullNameController.text.trim(),
+          email: existingProfile?.email ?? user.email ?? '',
+          fullName: existingProfile?.fullName ?? '',
           phone: _phoneController.text.trim(),
           ageRange: _selectedAgeRange,
           height: _heightController.text.trim(),
@@ -102,7 +101,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           weightliftingExperience: _weightliftingExperience,
           equipment: _selectedEquipment,
           sleepQuality: _selectedSleepQuality,
-          fitnessGoal: _fitnessGoalController.text.trim(),
+          fitnessGoal: _selectedFitnessGoal == 'Other'
+              ? _fitnessGoalController.text.trim()
+              : _selectedFitnessGoal ?? '',
           bodyVision: _bodyVisionController.text.trim(),
           commitmentLevel: _commitmentLevel,
           motivationLevel: _motivationLevel,
@@ -262,21 +263,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildRequiredLabel('Full Name'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _fullNameController,
-                  decoration: _buildInputDecoration('Enter your full name'),
-                ),
-                const SizedBox(height: 20),
-                _buildRequiredLabel('Email Address'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: _buildInputDecoration('your.email@example.com'),
-                ),
-                const SizedBox(height: 20),
+                // Full Name field removed as requested
+
                 _buildRequiredLabel('Phone Number'),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -644,14 +632,73 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   'What is your main focus?',
                   style: TextStyle(fontSize: 12, color: AppTheme.textLight),
                 ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _fitnessGoalController,
-                  maxLines: 2,
-                  decoration: _buildInputDecoration(
-                    'e.g., Fat loss, Muscle tone, Strength...',
+                const SizedBox(height: 12),
+                ...[
+                  'Fat Loss',
+                  'Muscle Tone & Sculpting',
+                  'Build Strength',
+                  'Improve Fitness & Endurance',
+                  'Post-Pregnancy Recovery',
+                  'Maintain Current Shape',
+                  'Other',
+                ].map((goal) => GestureDetector(
+                  onTap: () => setState(() {
+                    _selectedFitnessGoal = goal;
+                    if (goal != 'Other') _fitnessGoalController.clear();
+                  }),
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: _selectedFitnessGoal == goal
+                          ? AppTheme.primary.withOpacity(0.1)
+                          : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _selectedFitnessGoal == goal
+                            ? AppTheme.primary
+                            : Colors.grey.shade200,
+                        width: _selectedFitnessGoal == goal ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _selectedFitnessGoal == goal
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: _selectedFitnessGoal == goal
+                              ? AppTheme.primary
+                              : Colors.grey,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          goal,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: _selectedFitnessGoal == goal
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: _selectedFitnessGoal == goal
+                                ? AppTheme.primary
+                                : AppTheme.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                )),
+                if (_selectedFitnessGoal == 'Other') ...
+                  [
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _fitnessGoalController,
+                      maxLines: 2,
+                      decoration: _buildInputDecoration('Describe your goal...'),
+                    ),
+                  ],
                 const SizedBox(height: 32),
                 _buildRequiredLabel('Dream Body Vision'),
                 const Text(

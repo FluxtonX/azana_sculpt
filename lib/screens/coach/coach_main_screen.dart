@@ -18,12 +18,12 @@ class CoachMainScreen extends StatefulWidget {
 class _CoachMainScreenState extends State<CoachMainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _tabs = const [
-    CoachDashboardTab(),
-    CoachClientsTab(),
-    CoachProgramsTab(),
-    CoachMessagesTab(),
-    CoachProfileTab(),
+  final List<Widget> _tabs = [
+    const CoachDashboardTab(),
+    const CoachClientsTab(),
+    const CoachProgramsTab(),
+    const CoachMessagesTab(),
+    const CoachProfileTab(),
   ];
 
   @override
@@ -34,16 +34,15 @@ class _CoachMainScreenState extends State<CoachMainScreen> {
       stream: DatabaseService().getUnreadMessagesCountStream(coachId),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          debugPrint('Firestore Error (Check for missing index link): ${snapshot.error}');
+          debugPrint(
+            'Firestore Error (Check for missing index link): ${snapshot.error}',
+          );
         }
-        
+
         final unreadCount = snapshot.data ?? 0;
 
         return Scaffold(
-          body: IndexedStack(
-            index: _currentIndex,
-            children: _tabs,
-          ),
+          body: IndexedStack(index: _currentIndex, children: _tabs),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(
               boxShadow: [
@@ -61,7 +60,10 @@ class _CoachMainScreenState extends State<CoachMainScreen> {
               backgroundColor: AppTheme.surfaceCard,
               selectedItemColor: AppTheme.primary,
               unselectedItemColor: AppTheme.textLight,
-              selectedLabelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+              selectedLabelStyle: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
               unselectedLabelStyle: const TextStyle(fontSize: 10),
               items: [
                 const BottomNavigationBarItem(
@@ -74,9 +76,9 @@ class _CoachMainScreenState extends State<CoachMainScreen> {
                   activeIcon: Icon(Icons.people),
                   label: 'Clients',
                 ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.collections_bookmark_outlined),
-                  activeIcon: Icon(Icons.collections_bookmark),
+                BottomNavigationBarItem(
+                  icon: Image.asset('assets/icons/workout.png', width: 24, height: 24, color: AppTheme.textLight),
+                  activeIcon: Image.asset('assets/icons/workout.png', width: 24, height: 24, color: AppTheme.primary),
                   label: 'Programs',
                 ),
                 BottomNavigationBarItem(
@@ -103,7 +105,7 @@ class _CoachMainScreenState extends State<CoachMainScreen> {
             ),
           ),
         );
-      }
+      },
     );
   }
 }

@@ -6,7 +6,8 @@ import '../../../services/auth_service.dart';
 import '../chat_screen.dart';
 
 class CoachMessagesTab extends StatefulWidget {
-  const CoachMessagesTab({super.key});
+  final bool showBackButton;
+  const CoachMessagesTab({super.key, this.showBackButton = false});
 
   @override
   State<CoachMessagesTab> createState() => _CoachMessagesTabState();
@@ -34,13 +35,31 @@ class _CoachMessagesTabState extends State<CoachMessagesTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Messages',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                ),
+              Row(
+                children: [
+                  if (widget.showBackButton)
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceCard,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.divider),
+                        ),
+                        child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppTheme.textDark),
+                      ),
+                    ),
+                  const Text(
+                    'Messages',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               _buildSearchBox(),

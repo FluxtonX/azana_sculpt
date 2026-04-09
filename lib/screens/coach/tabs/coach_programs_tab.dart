@@ -8,7 +8,8 @@ import '../create_program_screen.dart';
 import '../manage_program_workouts_screen.dart';
 
 class CoachProgramsTab extends StatefulWidget {
-  const CoachProgramsTab({super.key});
+  final bool showBackButton;
+  const CoachProgramsTab({super.key, this.showBackButton = false});
 
   @override
   State<CoachProgramsTab> createState() => _CoachProgramsTabState();
@@ -134,13 +135,31 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
-          'Programs',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textDark,
-          ),
+        Row(
+          children: [
+            if (widget.showBackButton)
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceCard,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppTheme.divider),
+                  ),
+                  child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppTheme.textDark),
+                ),
+              ),
+            const Text(
+              'Programs',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+          ],
         ),
         ElevatedButton.icon(
           onPressed: () {
