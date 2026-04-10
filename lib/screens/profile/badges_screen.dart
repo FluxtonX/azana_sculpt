@@ -69,7 +69,7 @@ class _BadgesScreenState extends State<BadgesScreen>
                       crossAxisCount: 3,
                       crossAxisSpacing: 14,
                       mainAxisSpacing: 14,
-                      childAspectRatio: 0.82,
+                      childAspectRatio: 0.75,
                     ),
                     itemCount: _badges.length,
                     itemBuilder: (context, i) => _BadgeCard(badge: _badges[i]),
@@ -278,16 +278,18 @@ class _BadgeCardState extends State<_BadgeCard>
               ],
             ),
             const SizedBox(height: 10),
-            Text(
-              widget.badge.title,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: unlocked ? AppTheme.textDark : AppTheme.textLight,
-                height: 1.3,
+            Flexible(
+              child: Text(
+                widget.badge.title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: unlocked ? AppTheme.textDark : AppTheme.textLight,
+                  height: 1.3,
+                ),
               ),
             ),
           ],

@@ -1,9 +1,10 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../constants/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
-
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -27,11 +28,17 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.65, curve: Curves.easeIn)),
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.65, curve: Curves.easeIn),
+      ),
     );
 
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack)),
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack),
+      ),
     );
 
     _controller.forward();
@@ -41,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
       final user = AuthService().currentUser;
       if (user == null) {
-        Navigator.of(context).pushReplacementNamed('/login');
+        Navigator.of(context).pushReplacementNamed('/welcome');
         return;
       }
       // User is logged in — check role
@@ -62,7 +69,6 @@ class _SplashScreenState extends State<SplashScreen>
         Navigator.of(context).pushReplacementNamed('/home');
       }
     });
-
   }
 
   @override
@@ -77,9 +83,7 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppTheme.splashGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.splashGradient),
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Column(
@@ -124,26 +128,26 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
               const SizedBox(height: 48),
-              
+
               // ── App Name ──
               Text(
                 'Azana Sculpt',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      color: AppTheme.textDark,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
+                  color: AppTheme.textDark,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
               ),
               const SizedBox(height: 12),
-              
+
               // ── Tagline ──
               Text(
                 'Transform Your Fitness Journey',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textMedium,
-                      letterSpacing: 0.2,
-                      fontWeight: FontWeight.w400,
-                    ),
+                  color: AppTheme.textMedium,
+                  letterSpacing: 0.2,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ],
           ),

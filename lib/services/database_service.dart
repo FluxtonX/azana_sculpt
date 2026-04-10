@@ -431,6 +431,19 @@ class DatabaseService {
     });
   }
 
+  // --- Coaches ---
+
+  // Get All Coaches
+  Stream<List<UserModel>> getCoachesStream() {
+    return _db
+        .collection('users')
+        .where('role', isEqualTo: 'coach')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => UserModel.fromMap(doc.data())).toList();
+    });
+  }
+
   // Get stream of completed workout IDs for a program
   Stream<Set<String>> getCompletedWorkoutIdsStream(String userId, String programId) {
     return _db

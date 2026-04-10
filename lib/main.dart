@@ -10,6 +10,7 @@ import 'screens/login/login_screen.dart';
 import 'screens/signup/signup_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/coach/coach_main_screen.dart';
+import 'screens/login/welcome_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,7 @@ class AzanaSculptApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       home: const SplashScreen(),
       routes: {
+        '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),
         '/home': (context) => const HomeScreen(),

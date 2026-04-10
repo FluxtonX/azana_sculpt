@@ -26,6 +26,8 @@ import '../../services/database_service.dart';
 import '../../models/user_model.dart';
 import '../../models/program_model.dart';
 import '../../models/workout_models.dart';
+import '../../widgets/coach_card.dart';
+import '../coaches/all_coaches_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -229,6 +231,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           _buildWeeklyProgressCard(),
                           const SizedBox(height: 24),
                           _buildCoachMessageCard(),
+                          const SizedBox(height: 24),
+
+                          _buildCoachesSection(),
                           const SizedBox(height: 24),
 
                           // Dynamic motivation card
@@ -1008,6 +1013,88 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         height: 24,
         color: isActive ? AppTheme.primary : AppTheme.textLight,
       ),
+    );
+  }
+
+  Widget _buildCoachesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Elite Coaches',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textDark,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AllCoachesScreen()),
+              ),
+              child: const Text(
+                'View All',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 180,
+          child: StreamBuilder<List<UserModel>>(
+            stream: DatabaseService().getCoachesStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final coaches = snapshot.data ?? [];
+
+              if (coaches.isEmpty) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppTheme.divider.withOpacity(0.5),
+                    ),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'No coaches available yet.',
+                      style: TextStyle(color: AppTheme.textLight),
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: coaches.length,
+                itemBuilder: (context, index) {
+                  return CoachCard(
+                    coach: coaches[index],
+                    onTap: () {
+                      // Navigate to coach profile if needed
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

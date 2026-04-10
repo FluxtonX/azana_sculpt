@@ -710,12 +710,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _buildEliteChip('Advanced Programmes'),
-                const SizedBox(width: 8),
                 _buildEliteChip('Meal Plans'),
-                const SizedBox(width: 8),
                 _buildEliteChip('Coaching'),
               ],
             ),
