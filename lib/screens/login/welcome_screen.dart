@@ -115,7 +115,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                   // Subtitle Text
                   Text(
-                    "Build unstoppable strength with Nicci's Expert Training. Join now and discover your full potential!",
+                    "Where strength meets discipline.Fueled by you. Guided by expertise.Your transformation, done right.",
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: Colors.white,
