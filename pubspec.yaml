@@ -46,6 +46,9 @@ dependencies:
   uuid: ^4.3.3
   intl: ^0.20.2
   image_picker: ^1.1.2
+  http: ^1.2.1
+  path_provider: ^2.1.5
+  webview_flutter: ^4.13.1
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +77,7 @@ flutter:
     - assets/videos/
     - assets/data/
     - assets/icons/
+    - assets/onbarding/
     - assets/excompleteicon/badge_streak_14.png
     - assets/excompleteicon/badge_streak_3.png
     - assets/excompleteicon/badge_streak_30.png

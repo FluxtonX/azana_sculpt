@@ -6,6 +6,9 @@ class AppButton extends StatelessWidget {
   final VoidCallback onPressed;
   final bool isFullWidth;
   final bool isLoading;
+  final Color? backgroundColor;
+  final Color? textColor;
+  final double? fontSize;
 
   const AppButton({
     super.key,
@@ -13,23 +16,31 @@ class AppButton extends StatelessWidget {
     required this.onPressed,
     this.isFullWidth = true,
     this.isLoading = false,
+    this.backgroundColor,
+    this.textColor,
+    this.fontSize,
   });
 
   @override
   Widget build(BuildContext context) {
+    final bool isDefaultStyle = backgroundColor == null;
+
     return Container(
       width: isFullWidth ? double.infinity : null,
       height: 56,
       decoration: BoxDecoration(
-        gradient: AppTheme.primaryGradient,
+        color: backgroundColor,
+        gradient: isDefaultStyle ? AppTheme.primaryGradient : null,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: isDefaultStyle
+            ? [
+                BoxShadow(
+                  color: AppTheme.primary.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : [],
       ),
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
@@ -51,10 +62,13 @@ class AppButton extends StatelessWidget {
               )
             : Text(
                 text,
-                style: const TextStyle(
-                  fontSize: 16,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: fontSize ?? 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: textColor ?? Colors.white,
                 ),
               ),
       ),

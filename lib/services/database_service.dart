@@ -423,11 +423,18 @@ class DatabaseService {
     return _db
         .collection('completed_workouts')
         .where('userId', isEqualTo: userId)
-        .orderBy('completedAt', descending: true)
-        .limit(5)
+        // Removed orderBy to avoid index errors; sorting in Dart below
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => doc.data()).toList();
+      final docs = snapshot.docs.map((doc) => doc.data()).toList();
+      // Sort by completedAt descending
+      docs.sort((a, b) {
+        final dateA = a['completedAt'] as String? ?? '';
+        final dateB = b['completedAt'] as String? ?? '';
+        return dateB.compareTo(dateA);
+      });
+      // Limit to 5
+      return docs.take(5).toList();
     });
   }
 

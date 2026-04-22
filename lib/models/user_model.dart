@@ -4,6 +4,7 @@ class UserModel {
   final String? fullName;
   final String? phone;
   final String? ageRange;
+  final int? age;
   
   // Physical
   final String? height;
@@ -22,8 +23,10 @@ class UserModel {
   final List<String>? equipment;
   final String? sleepQuality;
   
-  // Goals & Mindset
+  // Personal
+  final String? gender;
   final String? fitnessGoal;
+  final List<String>? supplements;
   final String? bodyVision;
   final double? commitmentLevel;
   final double? motivationLevel;
@@ -58,6 +61,7 @@ class UserModel {
     this.fullName,
     this.phone,
     this.ageRange,
+    this.age,
     this.height,
     this.weight,
     this.heightUnit,
@@ -69,7 +73,9 @@ class UserModel {
     this.weightliftingExperience,
     this.equipment,
     this.sleepQuality,
+    this.gender,
     this.fitnessGoal,
+    this.supplements,
     this.bodyVision,
     this.commitmentLevel,
     this.motivationLevel,
@@ -99,6 +105,7 @@ class UserModel {
       'fullName': fullName,
       'phone': phone,
       'ageRange': ageRange,
+      'age': age,
       'height': height,
       'weight': weight,
       'heightUnit': heightUnit,
@@ -110,7 +117,9 @@ class UserModel {
       'weightliftingExperience': weightliftingExperience,
       'equipment': equipment,
       'sleepQuality': sleepQuality,
+      'gender': gender,
       'fitnessGoal': fitnessGoal,
+      'supplements': supplements,
       'bodyVision': bodyVision,
       'commitmentLevel': commitmentLevel,
       'motivationLevel': motivationLevel,
@@ -141,6 +150,7 @@ class UserModel {
       fullName: map['fullName'],
       phone: map['phone'],
       ageRange: map['ageRange'],
+      age: map['age'],
       height: map['height'],
       weight: map['weight'],
       heightUnit: map['heightUnit'],
@@ -152,7 +162,9 @@ class UserModel {
       weightliftingExperience: (map['weightliftingExperience'] as num?)?.toDouble(),
       equipment: List<String>.from(map['equipment'] ?? []),
       sleepQuality: map['sleepQuality'],
+      gender: map['gender'],
       fitnessGoal: map['fitnessGoal'],
+      supplements: map['supplements'] != null ? List<String>.from(map['supplements']) : null,
       bodyVision: map['bodyVision'],
       commitmentLevel: (map['commitmentLevel'] as num?)?.toDouble(),
       motivationLevel: (map['motivationLevel'] as num?)?.toDouble(),
@@ -182,6 +194,7 @@ class UserModel {
     String? fullName,
     String? phone,
     String? ageRange,
+    int? age,
     String? height,
     String? weight,
     String? heightUnit,
@@ -193,7 +206,9 @@ class UserModel {
     double? weightliftingExperience,
     List<String>? equipment,
     String? sleepQuality,
+    String? gender,
     String? fitnessGoal,
+    List<String>? supplements,
     String? bodyVision,
     double? commitmentLevel,
     double? motivationLevel,
@@ -220,6 +235,7 @@ class UserModel {
       fullName: fullName ?? this.fullName,
       phone: phone ?? this.phone,
       ageRange: ageRange ?? this.ageRange,
+      age: age ?? this.age,
       height: height ?? this.height,
       weight: weight ?? this.weight,
       heightUnit: heightUnit ?? this.heightUnit,
@@ -231,7 +247,9 @@ class UserModel {
       weightliftingExperience: weightliftingExperience ?? this.weightliftingExperience,
       equipment: equipment ?? this.equipment,
       sleepQuality: sleepQuality ?? this.sleepQuality,
+      gender: gender ?? this.gender,
       fitnessGoal: fitnessGoal ?? this.fitnessGoal,
+      supplements: supplements ?? this.supplements,
       bodyVision: bodyVision ?? this.bodyVision,
       commitmentLevel: commitmentLevel ?? this.commitmentLevel,
       motivationLevel: motivationLevel ?? this.motivationLevel,

@@ -1,19 +1,27 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
-import '../../widgets/app_button.dart';
 import '../../widgets/assessment_progress_bar.dart';
-import '../../widgets/unit_selector_field.dart';
-import '../../widgets/app_dropdown_field.dart';
-import '../../widgets/selection_toggle.dart';
-import '../../widgets/labelled_checkbox.dart';
-import '../../widgets/option_card.dart';
-import '../../widgets/assessment_slider.dart';
-import '../../widgets/program_pricing_card.dart';
-import '../../services/database_service.dart';
-import '../../services/auth_service.dart';
-import '../../models/user_model.dart';
+import '../../widgets/app_button.dart';
+import 'steps/age_step.dart';
+import 'steps/height_step.dart';
+import 'steps/weight_step.dart';
+import 'steps/supplements_step.dart';
+import 'steps/supplements_grid_step.dart';
+import 'steps/activity_step.dart';
+import 'steps/goal_step.dart';
+import 'steps/target_step.dart';
+import 'steps/exercise_experience_step.dart';
+import 'steps/equipment_step.dart';
+import 'steps/sleep_step.dart';
+import 'steps/commitment_step.dart';
+import 'steps/motivation_step.dart';
+import 'steps/challenge_step.dart';
+import 'steps/support_step.dart';
+import 'steps/investment_step.dart';
+import 'steps/readiness_step.dart';
+import 'steps/source_step.dart';
+import 'steps/social_step.dart';
+import 'steps/success_step.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -25,47 +33,43 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 1;
-  final int _totalSteps = 6;
-  bool _isSubmitting = false;
+  final int _totalSteps = 20;
 
-  // Step 1 Data
-  final TextEditingController _phoneController = TextEditingController();
-  String? _selectedAgeRange;
-
-  // Step 2 Data
-  final TextEditingController _heightController = TextEditingController();
-  final TextEditingController _weightController = TextEditingController();
-  String _heightUnit = 'cm';
+  // Data state
+  int _selectedAge = 18;
+  int _selectedHeight = 175;
+  final String _heightUnit = 'cm';
+  int _selectedWeight = 63;
   String _weightUnit = 'kg';
-
-  // Step 3 Data
-  bool? _isTakingMedication;
-  final List<String> _selectedMedicalConditions = [];
-
-  // Step 4 Data
-  String? _selectedActivityLevel;
+  String _supplementsOption = '';
+  List<String> _selectedSupplements = [];
+  int _activityLevel = 3;
+  String _selectedGoal = '';
+  final TextEditingController _dreamBodyController = TextEditingController();
   bool? _hasGymAccess;
-  double _weightliftingExperience = 1;
-  final List<String> _selectedEquipment = [];
-  String? _selectedSleepQuality;
+  String _selectedExperience = '';
+  List<String> _selectedEquipment = [];
+  String _selectedSleepQuality = '';
+  int _commitmentLevel = 1;
+  int _motivationLevel = 1;
+  final TextEditingController _challengeController = TextEditingController();
+  String _selectedSupport = '';
+  bool? _isReadyToInvest;
+  bool? _isReadyToStart;
+  final TextEditingController _sourceController = TextEditingController();
+  final TextEditingController _socialController = TextEditingController();
 
-  // Step 5 Data
-  String? _selectedFitnessGoal;
-  final TextEditingController _fitnessGoalController = TextEditingController();
-  final TextEditingController _bodyVisionController = TextEditingController();
-  double _commitmentLevel = 5;
-  double _motivationLevel = 3;
-  final TextEditingController _mentalBarriersController =
-      TextEditingController();
-  String? _coachingPreference;
+  @override
+  void dispose() {
+    _dreamBodyController.dispose();
+    _challengeController.dispose();
+    _sourceController.dispose();
+    _socialController.dispose();
+    _pageController.dispose();
+    super.dispose();
+  }
 
-  // Step 6 Data
-  String? _investmentReadiness;
-  String? _commitmentReadiness;
-  final TextEditingController _referralController = TextEditingController();
-  final TextEditingController _socialMediaController = TextEditingController();
-
-  Future<void> _nextPage() async {
+  void _nextPage() {
     if (_currentStep < _totalSteps) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
@@ -75,64 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _currentStep++;
       });
     } else {
-      // Handle completion & Save to Firestore
-      final user = AuthService().currentUser;
-      if (user == null) return;
-
-      try {
-        // Fetch existing profile to preserve the role
-        final existingProfile = await DatabaseService().getUserProfile(user.uid);
-        final String userRole = existingProfile?.role ?? 'client';
-
-        final userData = UserModel(
-          uid: user.uid,
-          email: existingProfile?.email ?? user.email ?? '',
-          fullName: existingProfile?.fullName ?? '',
-          phone: _phoneController.text.trim(),
-          ageRange: _selectedAgeRange,
-          height: _heightController.text.trim(),
-          weight: _weightController.text.trim(),
-          heightUnit: _heightUnit,
-          weightUnit: _weightUnit,
-          isTakingMedication: _isTakingMedication,
-          medicalConditions: _selectedMedicalConditions,
-          activityLevel: _selectedActivityLevel,
-          hasGymAccess: _hasGymAccess,
-          weightliftingExperience: _weightliftingExperience,
-          equipment: _selectedEquipment,
-          sleepQuality: _selectedSleepQuality,
-          fitnessGoal: _selectedFitnessGoal == 'Other'
-              ? _fitnessGoalController.text.trim()
-              : _selectedFitnessGoal ?? '',
-          bodyVision: _bodyVisionController.text.trim(),
-          commitmentLevel: _commitmentLevel,
-          motivationLevel: _motivationLevel,
-          mentalBarriers: _mentalBarriersController.text.trim(),
-          coachingPreference: _coachingPreference,
-          investmentReadiness: _investmentReadiness,
-          commitmentReadiness: _commitmentReadiness,
-          referral: _referralController.text.trim(),
-          socialMedia: _socialMediaController.text.trim(),
-          role: userRole,
-          updatedAt: DateTime.now(),
-        );
-
-        await DatabaseService().saveUserProfile(userData);
-
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to save profile: $e')),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isSubmitting = false);
-        }
-      }
+      // Final submission logic
     }
   }
 
@@ -150,871 +97,203 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isLastStep = _currentStep == _totalSteps;
+
     return Scaffold(
-      backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: _currentStep > 1
-            ? IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  color: AppTheme.textMedium,
-                ),
-                onPressed: _previousPage,
-              )
-            : IconButton(
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  color: AppTheme.textMedium,
-                ),
-                onPressed: () => Navigator.pop(context),
-              ),
-        title: Column(
-          children: const [
-            Text(
-              'Azana Sculpt',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primary,
-              ),
-            ),
-            Text(
-              'Assessment',
-              style: TextStyle(fontSize: 12, color: AppTheme.textLight),
-            ),
-          ],
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-            child: Text(
-              '$_currentStep/$_totalSteps',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textMedium,
-              ),
-            ),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(6),
-          child: AssessmentProgressBar(
-            currentStep: _currentStep,
-            totalSteps: _totalSteps,
-          ),
-        ),
-      ),
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          _buildStep1(),
-          _buildStep2(),
-          _buildStep3(),
-          _buildStep4(),
-          _buildStep5(),
-          _buildStep6(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep1() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Text(
-                'Welcome! ',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                ),
-              ),
-              Text('👋', style: TextStyle(fontSize: 28)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Let's start with your personal information",
-            style: TextStyle(fontSize: 16, color: AppTheme.textMedium),
-          ),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.textDark.withOpacity(0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Full Name field removed as requested
-
-                _buildRequiredLabel('Phone Number'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: _buildInputDecoration('WhatsApp preferred'),
-                ),
-                const Text(
-                  'We prefer WhatsApp for quick communication',
-                  style: TextStyle(fontSize: 11, color: AppTheme.textLight),
-                ),
-                const SizedBox(height: 20),
-                AppDropdownField(
-                  label: 'Age Range',
-                  hint: 'Select your age range',
-                  items: const ['18-24', '25-34', '35-44', '45+'],
-                  value: _selectedAgeRange,
-                  onChanged: (val) => setState(() => _selectedAgeRange = val),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 48),
-          _isSubmitting
-              ? const Center(child: CircularProgressIndicator())
-              : AppButton(
-                  text: _currentStep == _totalSteps ? 'Submit Assessment' : 'Continue',
-                  onPressed: _nextPage,
-                  isFullWidth: true,
-                ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep2() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Text(
-                'Physical Information ',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                ),
-              ),
-              Text('📏', style: TextStyle(fontSize: 28)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Help us understand your starting point",
-            style: TextStyle(fontSize: 16, color: AppTheme.textMedium),
-          ),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.textDark.withOpacity(0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                UnitSelectorField(
-                  label: 'Current Height',
-                  hint: 'e.g., 173',
-                  unit: _heightUnit,
-                  units: const ['cm', 'ft'],
-                  controller: _heightController,
-                  onUnitChanged: (val) => setState(() => _heightUnit = val!),
-                ),
-                const SizedBox(height: 24),
-                UnitSelectorField(
-                  label: 'Current Weight',
-                  hint: 'e.g., 65',
-                  unit: _weightUnit,
-                  units: const ['kg', 'lbs'],
-                  controller: _weightController,
-                  onUnitChanged: (val) => setState(() => _weightUnit = val!),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 48),
-          _buildNavigationButtons(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep3() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Text(
-                'Medical & Health ',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                ),
-              ),
-              Text('🏥', style: TextStyle(fontSize: 28)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Your safety is our top priority",
-            style: TextStyle(fontSize: 16, color: AppTheme.textMedium),
-          ),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.textDark.withOpacity(0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SelectionToggle(
-                  label: 'Are you currently taking any medication?',
-                  value: _isTakingMedication,
-                  onChanged: (val) => setState(() => _isTakingMedication = val),
-                ),
-                const SizedBox(height: 32),
-                _buildRequiredLabel('Medical Conditions'),
-                const Text(
-                  'Select any that apply to you',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight),
-                ),
-                const SizedBox(height: 16),
-                ...[
-                  'High Blood Pressure',
-                  'Heart Condition (history of heart attack, stroke)',
-                  'Diabetes (Type 1 or Type 2)',
-                  'Asthma or respiratory issues',
-                  'Joint / Back Problems (arthritis, herniated disc)',
-                  'Eating Disorder history',
-                  'None of the above',
-                  'Other',
-                ].map(
-                  (condition) => LabelledCheckbox(
-                    label: condition,
-                    isSelected: _selectedMedicalConditions.contains(condition),
-                    onChanged: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedMedicalConditions.add(condition);
-                        } else {
-                          _selectedMedicalConditions.remove(condition);
-                        }
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 48),
-          _buildNavigationButtons(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep4() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Text(
-                'Fitness Background ',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                ),
-              ),
-              Text('💪', style: TextStyle(fontSize: 28)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Tell us about your fitness journey",
-            style: TextStyle(fontSize: 16, color: AppTheme.textMedium),
-          ),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.textDark.withOpacity(0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildRequiredLabel('Current Activity Level'),
-                const SizedBox(height: 16),
-                _buildOptionCard(
-                  'Sedentary',
-                  'Little or no exercise',
-                  'ActivityLevel',
-                ),
-                _buildOptionCard(
-                  'Lightly Active',
-                  '1-3 days/week',
-                  'ActivityLevel',
-                ),
-                _buildOptionCard(
-                  'Moderately Active',
-                  '3-5 days/week',
-                  'ActivityLevel',
-                ),
-                _buildOptionCard(
-                  'Very Active',
-                  '6-7 days/week',
-                  'ActivityLevel',
-                ),
-                _buildOptionCard(
-                  'Extremely Active',
-                  'Daily intense activity',
-                  'ActivityLevel',
-                ),
-                const SizedBox(height: 32),
-                SelectionToggle(
-                  label: 'Do you currently have access to a gym?',
-                  value: _hasGymAccess,
-                  onChanged: (val) => setState(() => _hasGymAccess = val),
-                ),
-                const SizedBox(height: 32),
-                AssessmentSlider(
-                  label: 'Weightlifting Experience',
-                  value: _weightliftingExperience,
-                  max: 5,
-                  divisions: 4,
-                  minLabel: 'Beginner',
-                  maxLabel: 'Expert',
-                  onChanged: (val) =>
-                      setState(() => _weightliftingExperience = val),
-                ),
-                const SizedBox(height: 32),
-                _buildRequiredLabel('Equipment Access'),
-                const Text(
-                  'Select all that apply',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: _buildEquipmentCheckbox('Gym Membership')),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildEquipmentCheckbox('Home Equipment')),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(child: _buildEquipmentCheckbox('Cardio Machines')),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildEquipmentCheckbox('Bodyweight Only')),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(child: _buildEquipmentCheckbox('Outdoor Space')),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildEquipmentCheckbox('None')),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                AppDropdownField(
-                  label: 'Sleep Quality',
-                  hint: 'How would you describe your sleep?',
-                  items: const ['Poor', 'Fair', 'Good', 'Excellent'],
-                  value: _selectedSleepQuality,
-                  onChanged: (val) =>
-                      setState(() => _selectedSleepQuality = val),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 48),
-          _buildNavigationButtons(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep5() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Text(
-                'Goals & Mindset ',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                ),
-              ),
-              Text('🎯', style: TextStyle(fontSize: 28)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "What drives you to transform?",
-            style: TextStyle(fontSize: 16, color: AppTheme.textMedium),
-          ),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.textDark.withOpacity(0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildRequiredLabel('Primary Fitness Goal'),
-                const Text(
-                  'What is your main focus?',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight),
-                ),
-                const SizedBox(height: 12),
-                ...[
-                  'Fat Loss',
-                  'Muscle Tone & Sculpting',
-                  'Build Strength',
-                  'Improve Fitness & Endurance',
-                  'Post-Pregnancy Recovery',
-                  'Maintain Current Shape',
-                  'Other',
-                ].map((goal) => GestureDetector(
-                  onTap: () => setState(() {
-                    _selectedFitnessGoal = goal;
-                    if (goal != 'Other') _fitnessGoalController.clear();
-                  }),
-                  child: Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: _selectedFitnessGoal == goal
-                          ? AppTheme.primary.withOpacity(0.1)
-                          : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _selectedFitnessGoal == goal
-                            ? AppTheme.primary
-                            : Colors.grey.shade200,
-                        width: _selectedFitnessGoal == goal ? 2 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _selectedFitnessGoal == goal
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                          color: _selectedFitnessGoal == goal
-                              ? AppTheme.primary
-                              : Colors.grey,
-                          size: 20,
+      backgroundColor: isLastStep ? AppTheme.primary : AppTheme.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. High-Fidelity Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Step $_currentStep of $_totalSteps',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isLastStep ? Colors.white : AppTheme.textLight,
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          goal,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: _selectedFitnessGoal == goal
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                            color: _selectedFitnessGoal == goal
-                                ? AppTheme.primary
-                                : AppTheme.textDark,
+                      ),
+                      Text(
+                        '${((_currentStep / _totalSteps) * 100).toInt()}%',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isLastStep ? Colors.white : AppTheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  AssessmentProgressBar(
+                    currentStep: _currentStep,
+                    totalSteps: _totalSteps,
+                    isAlternative: isLastStep,
+                  ),
+                ],
+              ),
+            ),
+
+            // 2. Main Content (Modular Steps)
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  AgeStep(
+                    selectedAge: _selectedAge,
+                    onAgeChanged: (val) => setState(() => _selectedAge = val),
+                  ),
+                  HeightStep(
+                    selectedHeight: _selectedHeight,
+                    unit: _heightUnit,
+                    onHeightChanged: (val) => setState(() => _selectedHeight = val),
+                  ),
+                  WeightStep(
+                    selectedWeight: _selectedWeight,
+                    unit: _weightUnit,
+                    onWeightChanged: (val) => setState(() => _selectedWeight = val),
+                    onUnitChanged: (val) => setState(() => _weightUnit = val),
+                  ),
+                  SupplementsStep(
+                    selectedOption: _supplementsOption,
+                    onOptionChanged: (val) => setState(() => _supplementsOption = val),
+                  ),
+                  SupplementsGridStep(
+                    selectedSupplements: _selectedSupplements,
+                    onSupplementsChanged: (val) => setState(() => _selectedSupplements = val),
+                  ),
+                  ActivityStep(
+                    activityLevel: _activityLevel,
+                    onActivityChanged: (val) => setState(() => _activityLevel = val),
+                  ),
+                  GoalStep(
+                    selectedGoal: _selectedGoal,
+                    onGoalChanged: (val) => setState(() => _selectedGoal = val),
+                  ),
+                  TargetStep(
+                    answerController: _dreamBodyController,
+                    hasGymAccess: _hasGymAccess,
+                    onGymAccessChanged: (val) => setState(() => _hasGymAccess = val),
+                  ),
+                  ExerciseExperienceStep(
+                    selectedExperience: _selectedExperience,
+                    onExperienceChanged: (val) => setState(() => _selectedExperience = val),
+                  ),
+                  EquipmentStep(
+                    selectedEquipment: _selectedEquipment,
+                    onEquipmentChanged: (val) => setState(() => _selectedEquipment = val),
+                  ),
+                  SleepStep(
+                    selectedSleep: _selectedSleepQuality,
+                    onSleepChanged: (val) => setState(() => _selectedSleepQuality = val),
+                  ),
+                  CommitmentStep(
+                    selectedLevel: _commitmentLevel,
+                    onLevelChanged: (val) => setState(() => _commitmentLevel = val),
+                  ),
+                  MotivationStep(
+                    selectedLevel: _motivationLevel,
+                    onLevelChanged: (val) => setState(() => _motivationLevel = val),
+                  ),
+                  ChallengeStep(
+                    challengeController: _challengeController,
+                  ),
+                  SupportStep(
+                    selectedSupport: _selectedSupport,
+                    onSupportChanged: (val) => setState(() => _selectedSupport = val),
+                  ),
+                  InvestmentStep(
+                    isReadyToInvest: _isReadyToInvest,
+                    onInvestChanged: (val) => setState(() => _isReadyToInvest = val),
+                  ),
+                  ReadinessStep(
+                    isReadyToStart: _isReadyToStart,
+                    onReadinessChanged: (val) => setState(() => _isReadyToStart = val),
+                  ),
+                  SourceStep(
+                    sourceController: _sourceController,
+                  ),
+                  SocialStep(
+                    socialController: _socialController,
+                  ),
+                  const SuccessStep(),
+                ],
+              ),
+            ),
+
+            // 3. Bottom Navigation
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: isLastStep
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: AppButton(
+                            text: "Get Start",
+                            backgroundColor: Colors.white,
+                            textColor: AppTheme.primary,
+                            onPressed: () {},
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: AppButton(
+                            text: "View My Profile →",
+                            backgroundColor: Colors.white.withOpacity(0.2),
+                            onPressed: () {},
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                )),
-                if (_selectedFitnessGoal == 'Other') ...
-                  [
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _fitnessGoalController,
-                      maxLines: 2,
-                      decoration: _buildInputDecoration('Describe your goal...'),
-                    ),
-                  ],
-                const SizedBox(height: 32),
-                _buildRequiredLabel('Dream Body Vision'),
-                const Text(
-                  'Describe your ideal body in 12-16 weeks',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _bodyVisionController,
-                  maxLines: 3,
-                  decoration: _buildInputDecoration(
-                    'Paint a picture of how you see yourself...',
-                  ),
-                ),
-                const SizedBox(height: 32),
-                AssessmentSlider(
-                  label: 'Commitment Level',
-                  value: _commitmentLevel,
-                  divisions: 9,
-                  minLabel: 'Not serious',
-                  maxLabel: 'Extremely serious',
-                  onChanged: (val) => setState(() => _commitmentLevel = val),
-                ),
-                const SizedBox(height: 32),
-                AssessmentSlider(
-                  label: 'Motivation Level',
-                  value: _motivationLevel,
-                  max: 5,
-                  divisions: 4,
-                  minLabel: 'Not motivated',
-                  maxLabel: 'Extremely motivated',
-                  onChanged: (val) => setState(() => _motivationLevel = val),
-                ),
-                const SizedBox(height: 32),
-                _buildRequiredLabel('Mental Barriers'),
-                const Text(
-                  "What's your biggest mental hurdle?",
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _mentalBarriersController,
-                  maxLines: 3,
-                  decoration: _buildInputDecoration(
-                    'e.g., Discipline, Time management, Confidence...',
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildRequiredLabel('Coaching Support Preference'),
-                const SizedBox(height: 16),
-                _buildOptionCard("I'm not sure yet", null, 'Coaching'),
-                _buildOptionCard(
-                  "Full coaching guidance (custom plan, nutrition, support)",
-                  null,
-                  'Coaching',
-                ),
-                _buildOptionCard("Other", null, 'Coaching'),
-              ],
+                    )
+                  : _currentStep == 1
+                      ? AppButton(
+                          text: "Continue",
+                          onPressed: _nextPage,
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _previousPage,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  side: const BorderSide(color: AppTheme.primary, width: 1),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Back",
+                                  style: TextStyle(
+                                    fontFamily: 'Outfit',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: AppButton(
+                                text: "Continue",
+                                onPressed: _nextPage,
+                              ),
+                            ),
+                          ],
+                        ),
             ),
-          ),
-          const SizedBox(height: 48),
-          _buildNavigationButtons(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep6() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Text(
-                'Final Step ',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                ),
-              ),
-              Text('🚀', style: TextStyle(fontSize: 28)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Ready to commit to your transformation?",
-            style: TextStyle(fontSize: 16, color: AppTheme.textMedium),
-          ),
-          const SizedBox(height: 32),
-          const ProgramPricingCard(),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.textDark.withOpacity(0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildRequiredLabel('Investment Readiness'),
-                const Text(
-                  'Which best describes you right now?',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight),
-                ),
-                const SizedBox(height: 16),
-                _buildOptionCard(
-                  "Yes — I'm ready to invest at this level",
-                  null,
-                  'Investment',
-                ),
-                _buildOptionCard(
-                  "I'm not in a position to invest right now",
-                  null,
-                  'Investment',
-                ),
-                const SizedBox(height: 32),
-                _buildRequiredLabel('Commitment Readiness'),
-                const SizedBox(height: 16),
-                _buildOptionCard(
-                  "Yes — I'm ready to begin my transformation now",
-                  null,
-                  'Commitment',
-                ),
-                _buildOptionCard(
-                  "No — I'm not ready at this time",
-                  null,
-                  'Commitment',
-                ),
-                const SizedBox(height: 32),
-                _buildRequiredLabel('How did you hear about this program?'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _referralController,
-                  decoration: _buildInputDecoration(
-                    'e.g., Instagram, Facebook, Friend, Ad...',
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildRequiredLabel('Social Media Profile'),
-                const Text(
-                  'Please share your Instagram or Facebook handle',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _socialMediaController,
-                  decoration: _buildInputDecoration('@username'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.orange.withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: const [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.orange,
-                      size: 20,
-                    ),
-                    SizedBox(width: 10),
-                    Text(
-                      'Important - Please Read',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'If your application is successful, I will contact you using the number you provided. Please double-check your contact details before submitting.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.textMedium,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 48),
-          _buildNavigationButtons(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOptionCard(String title, String? subtitle, String type) {
-    bool isSelected = false;
-    VoidCallback onTap = () {};
-
-    if (type == 'ActivityLevel') {
-      isSelected = _selectedActivityLevel == title;
-      onTap = () => setState(() => _selectedActivityLevel = title);
-    } else if (type == 'Coaching') {
-      isSelected = _coachingPreference == title;
-      onTap = () => setState(() => _coachingPreference = title);
-    } else if (type == 'Investment') {
-      isSelected = _investmentReadiness == title;
-      onTap = () => setState(() => _investmentReadiness = title);
-    } else if (type == 'Commitment') {
-      isSelected = _commitmentReadiness == title;
-      onTap = () => setState(() => _commitmentReadiness = title);
-    }
-
-    return OptionCard(
-      title: title,
-      subtitle: subtitle,
-      isSelected: isSelected,
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildEquipmentCheckbox(String label) {
-    return LabelledCheckbox(
-      label: label,
-      isSelected: _selectedEquipment.contains(label),
-      onChanged: (selected) {
-        setState(() {
-          if (selected) {
-            _selectedEquipment.add(label);
-          } else {
-            _selectedEquipment.remove(label);
-          }
-        });
-      },
-    );
-  }
-
-  Widget _buildNavigationButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _previousPage,
-            icon: const Icon(Icons.arrow_back_rounded, size: 18),
-            label: const Text('Back'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              foregroundColor: AppTheme.textMedium,
-              side: BorderSide(color: Colors.grey.withOpacity(0.2)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
+          ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          flex: 2,
-          child: AppButton(
-            text: _currentStep == _totalSteps
-                ? 'Submit Application'
-                : 'Continue',
-            onPressed: _nextPage,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRequiredLabel(String text) {
-    return RichText(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: AppTheme.textDark,
-        ),
-        children: const [
-          TextSpan(
-            text: ' *',
-            style: TextStyle(color: Colors.redAccent),
-          ),
-        ],
-      ),
-    );
-  }
-
-  InputDecoration _buildInputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(fontSize: 14, color: AppTheme.textLight),
-      filled: true,
-      fillColor: Colors.grey.withOpacity(0.05),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
       ),
     );
   }

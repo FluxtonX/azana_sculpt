@@ -6,6 +6,7 @@ class ExerciseModel {
   final String reps;
   final int restSeconds;
   final String? videoUrl;
+  final String? thumbnailUrl;
 
   ExerciseModel({
     required this.id,
@@ -15,6 +16,7 @@ class ExerciseModel {
     required this.reps,
     required this.restSeconds,
     this.videoUrl,
+    this.thumbnailUrl,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class ExerciseModel {
       'reps': reps,
       'restSeconds': restSeconds,
       'videoUrl': videoUrl,
+      'thumbnailUrl': thumbnailUrl,
     };
   }
 
@@ -38,6 +41,7 @@ class ExerciseModel {
       reps: map['reps'] ?? '',
       restSeconds: map['restSeconds'] ?? 0,
       videoUrl: map['videoUrl'],
+      thumbnailUrl: map['thumbnailUrl'],
     );
   }
 }
