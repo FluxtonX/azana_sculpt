@@ -16,25 +16,30 @@ class HeightStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const StepHeader(
-          title: "What's your height?",
-          subtitle: "Height helps calculate BMI and calorie needs",
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const StepHeader(
+              title: "What's your height?",
+              subtitle: "Height helps calculate BMI and calorie needs",
+            ),
+            const SizedBox(height: 60),
+            Center(
+              child: RulerPicker(
+                min: 120,
+                max: 230,
+                initialValue: selectedHeight,
+                unit: unit,
+                onChanged: onHeightChanged,
+              ),
+            ),
+            const SizedBox(height: 40),
+          ],
         ),
-        const Spacer(),
-        Center(
-          child: RulerPicker(
-            min: 120,
-            max: 230,
-            initialValue: selectedHeight,
-            unit: unit,
-            onChanged: onHeightChanged,
-          ),
-        ),
-        const Spacer(flex: 2),
-      ],
+      ),
     );
   }
 }

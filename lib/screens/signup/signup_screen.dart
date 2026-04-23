@@ -3,6 +3,7 @@ import '../../constants/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../models/user_model.dart';
+import '../../widgets/animated_auth_button.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -306,40 +307,10 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 24),
 
                   // ── Create Account Button ────────────────────────────────
-                  SizedBox(
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleSignup,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        disabledBackgroundColor: AppTheme.primary.withOpacity(
-                          0.6,
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : const Text(
-                              'Create Account',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                    ),
+                  AnimatedAuthButton(
+                    text: 'Create Account',
+                    isLoading: _isLoading,
+                    onTap: _handleSignup,
                   ),
                   const SizedBox(height: 26),
 

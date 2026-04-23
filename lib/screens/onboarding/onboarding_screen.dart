@@ -1,5 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
+import '../../services/database_service.dart';
+import '../../models/user_model.dart';
 import '../../widgets/assessment_progress_bar.dart';
 import '../../widgets/app_button.dart';
 import 'steps/age_step.dart';
@@ -34,6 +37,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 1;
   final int _totalSteps = 20;
+  bool _isSaving = false;
 
   // Data state
   int _selectedAge = 18;
@@ -69,6 +73,54 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  Future<void> _submitOnboarding() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final userProfile = UserModel(
+        uid: user.uid,
+        email: user.email ?? '',
+        age: _selectedAge,
+        height: _selectedHeight.toString(),
+        heightUnit: _heightUnit,
+        weight: _selectedWeight.toString(),
+        weightUnit: _weightUnit,
+        fitnessGoal: _selectedGoal,
+        activityLevel: _activityLevel.toString(),
+        hasGymAccess: _hasGymAccess,
+        supplements: _selectedSupplements,
+        bodyVision: _dreamBodyController.text,
+        weightliftingExperience: _selectedExperience == 'Advanced' ? 5.0 : (_selectedExperience == 'Intermediate' ? 2.0 : 0.0),
+        equipment: _selectedEquipment,
+        sleepQuality: _selectedSleepQuality,
+        commitmentLevel: _commitmentLevel.toDouble(),
+        motivationLevel: _motivationLevel.toDouble(),
+        mentalBarriers: _challengeController.text,
+        referral: _sourceController.text,
+        socialMedia: _socialController.text,
+        role: 'client',
+        updatedAt: DateTime.now(),
+      );
+
+      await DatabaseService().saveUserProfile(userProfile);
+
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving profile: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   void _nextPage() {
     if (_currentStep < _totalSteps) {
       _pageController.nextPage(
@@ -79,7 +131,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _currentStep++;
       });
     } else {
-      // Final submission logic
+      _submitOnboarding();
     }
   }
 
@@ -102,8 +154,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       backgroundColor: isLastStep ? AppTheme.primary : AppTheme.surface,
       body: SafeArea(
-        child: Column(
-          children: [
+        child: AbsorbPointer(
+          absorbing: _isSaving,
+          child: Column(
+            children: [
             // 1. High-Fidelity Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -233,27 +287,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             // 3. Bottom Navigation
             Padding(
               padding: const EdgeInsets.all(24),
-              child: isLastStep
-                  ? Row(
-                      children: [
-                        Expanded(
-                          child: AppButton(
-                            text: "Get Start",
-                            backgroundColor: Colors.white,
-                            textColor: AppTheme.primary,
-                            onPressed: () {},
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: AppButton(
-                            text: "View My Profile →",
-                            backgroundColor: Colors.white.withOpacity(0.2),
-                            onPressed: () {},
-                          ),
-                        ),
-                      ],
-                    )
+              child: _isSaving
+                  ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                  : isLastStep
+                      ? Row(
+                          children: [
+                            Expanded(
+                              child: AppButton(
+                                text: "Get Start",
+                                backgroundColor: Colors.white,
+                                textColor: AppTheme.primary,
+                                onPressed: _submitOnboarding,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: AppButton(
+                                text: "View My Profile →",
+                                backgroundColor: Colors.white.withOpacity(0.2),
+                                onPressed: () {
+                                  Navigator.of(context).pushReplacementNamed('/home');
+                                },
+                              ),
+                            ),
+                          ],
+                        )
                   : _currentStep == 1
                       ? AppButton(
                           text: "Continue",
@@ -292,7 +350,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ],
                         ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

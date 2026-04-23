@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:azana_sculpt/constants/app_theme.dart';
 import 'package:flutter/material.dart';
 
 // ─────────────────────────────────────────────
@@ -43,18 +44,28 @@ class _FitnessScoreCardState extends State<FitnessScoreCard>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _anim,
-      builder: (context, _) {
-        final value = _anim.value * widget.targetScore; // 0 → 78
-        return _buildCard(value);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return AnimatedBuilder(
+          animation: _anim,
+          builder: (context, _) {
+            final value = _anim.value * widget.targetScore;
+            return _buildCard(value, constraints.maxWidth);
+          },
+        );
       },
     );
   }
 
-  Widget _buildCard(double value) {
+  Widget _buildCard(double value, double maxWidth) {
+    // Calculate a scale factor based on standard mobile width (375)
+    final double scale = (maxWidth / 375).clamp(0.8, 1.2);
+    final double gaugeSize =
+        140 * scale; // Slightly smaller gauge to ensure fit
+
     return Container(
-      height: 260,
+      width: maxWidth,
+      height: 300 * scale, // Increased height to prevent overflow
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -68,7 +79,7 @@ class _FitnessScoreCardState extends State<FitnessScoreCard>
       ),
       child: Stack(
         children: [
-          // ── Background image (right side, fading left) ──
+          // ── Background image ──
           Positioned.fill(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
@@ -76,14 +87,14 @@ class _FitnessScoreCardState extends State<FitnessScoreCard>
                 children: [
                   Align(
                     alignment: Alignment.centerRight,
-                    child: Image.network(
-                      'https://images.unsplash.com/photo-1518611012118-696072aa579a?q=80&w=2070',
-                      fit: BoxFit.cover,
-                      width: 220,
-                      height: double.infinity,
+                    child: Opacity(
+                      opacity: 0.9,
+                      child: Image.asset(
+                        'assets/home/firstCard.png',
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
-                  // Left-to-right white fade
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -91,10 +102,10 @@ class _FitnessScoreCardState extends State<FitnessScoreCard>
                         end: Alignment.centerRight,
                         colors: [
                           Colors.white,
-                          Colors.white.withOpacity(0.55),
+                          Colors.white.withOpacity(0.4),
                           Colors.white.withOpacity(0.0),
                         ],
-                        stops: const [0.0, 0.42, 1.0],
+                        stops: const [0.0, 0.5, 1.0],
                       ),
                     ),
                   ),
@@ -105,27 +116,26 @@ class _FitnessScoreCardState extends State<FitnessScoreCard>
 
           // ── Foreground content ──
           Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: EdgeInsets.all(20.0 * scale),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Your Fitness Score',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 14 * scale,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF6B7280),
+                        color: const Color(0xFF6B7280),
                       ),
                     ),
-                    _TrendBadge(),
+                    _TrendBadge(scale: scale),
                   ],
                 ),
 
-                const SizedBox(height: 6),
+                SizedBox(height: 6 * scale),
 
                 // Big animated number
                 Row(
@@ -134,81 +144,75 @@ class _FitnessScoreCardState extends State<FitnessScoreCard>
                   children: [
                     Text(
                       value.toInt().toString(),
-                      style: const TextStyle(
-                        fontSize: 54,
+                      style: TextStyle(
+                        fontSize: 54 * scale,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF111827),
+                        color: const Color(0xFF111827),
                         letterSpacing: -1.5,
                         height: 1.0,
                       ),
                     ),
-                    const SizedBox(width: 3),
-                    const Text(
+                    SizedBox(width: 4 * scale),
+                    Text(
                       '/100',
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: 17 * scale,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFFB0B8C4),
+                        color: const Color(0xFFB0B8C4),
                       ),
                     ),
                   ],
                 ),
 
+                // Proportional gap
+                SizedBox(height: 12 * scale),
+
                 // Decagon + arc ring + center number
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: SizedBox(
-                      width: 148,
-                      height: 148,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // 10-sided polygon background
-                          CustomPaint(
-                            size: const Size(148, 148),
-                            painter: _DecagonPainter(
-                              color: const Color(0xFF9E5C62),
-                            ),
+                Align(
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: gaugeSize,
+                    height: gaugeSize,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CustomPaint(
+                          size: Size(gaugeSize, gaugeSize),
+                          painter: _DecagonPainter(color: AppTheme.primary),
+                        ),
+                        CustomPaint(
+                          size: Size(gaugeSize * 0.88, gaugeSize * 0.88),
+                          painter: _ArcProgressPainter(
+                            progress: value / 100,
+                            trackColor: Colors.white.withOpacity(0.22),
+                            progressColor: Colors.white,
+                            strokeWidth: 9.0 * scale,
                           ),
-
-                          // Arc progress ring
-                          CustomPaint(
-                            size: const Size(148, 148),
-                            painter: _ArcProgressPainter(
-                              progress: value / 100,
-                              trackColor: Colors.white.withOpacity(0.22),
-                              progressColor: Colors.white,
-                              strokeWidth: 9.5,
-                            ),
+                        ),
+                        Text(
+                          value.toInt().toString(),
+                          style: TextStyle(
+                            fontSize: 42 * scale,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: -1.5,
+                            height: 1.0,
                           ),
-
-                          // Center score text (white)
-                          Text(
-                            value.toInt().toString(),
-                            style: const TextStyle(
-                              fontSize: 44,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: -1.5,
-                              height: 1.0,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 6),
+                const Spacer(),
 
                 // Footer label
-                const Text(
+                Text(
                   'Based on workouts, consistency & goals',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11.5 * scale,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF4B5563),
+                    color: const Color(0xFF4B5563),
                   ),
                 ),
               ],
@@ -224,25 +228,32 @@ class _FitnessScoreCardState extends State<FitnessScoreCard>
 //  +5% Trend badge widget
 // ─────────────────────────────────────────────
 class _TrendBadge extends StatelessWidget {
+  final double scale;
+  const _TrendBadge({this.scale = 1.0});
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 9 * scale, vertical: 4 * scale),
       decoration: BoxDecoration(
         color: const Color(0xFFE6F5E9),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(20 * scale),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.trending_up_rounded, size: 13, color: Color(0xFF2E8B57)),
-          SizedBox(width: 3),
+          Icon(
+            Icons.trending_up_rounded,
+            size: 13 * scale,
+            color: const Color(0xFF2E8B57),
+          ),
+          SizedBox(width: 3 * scale),
           Text(
             '+5%',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 11 * scale,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF2E8B57),
+              color: const Color(0xFF2E8B57),
             ),
           ),
         ],

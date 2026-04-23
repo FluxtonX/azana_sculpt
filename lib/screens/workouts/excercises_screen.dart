@@ -13,23 +13,37 @@ class ExerciseFetchScreen extends StatefulWidget {
   State<ExerciseFetchScreen> createState() => _ExerciseFetchScreenState();
 }
 
-class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
+class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerProviderStateMixin {
   bool _isLoading = true;
   String? _error;
   List<String> _exerciseNames = [];
+  List<String> _filteredExercises = [];
   Map<String, String> _folderIds = {};
-  List<String> _unlockedFolders = []; // List of folder names that are unlocked
+  List<String> _unlockedFolders = [];
   final GoogleDriveService _driveService = GoogleDriveService();
+  
+  // Search state
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  
+  // Animation Controllers
+  late AnimationController _listAnimationController;
 
   @override
   void initState() {
     super.initState();
+    _listAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _initScreen();
   }
 
   @override
   void dispose() {
     _driveService.dispose();
+    _searchController.dispose();
+    _listAnimationController.dispose();
     super.dispose();
   }
 
@@ -52,27 +66,104 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
 
       setState(() {
         _exerciseNames = stored;
+        _filteredExercises = stored;
         _folderIds = folderIds;
-        _unlockedFolders = unlocked.isEmpty && stored.isNotEmpty ? [stored.first] : unlocked;
+        _unlockedFolders = unlocked.isEmpty && stored.isNotEmpty
+            ? [stored.first]
+            : unlocked;
         _isLoading = false;
       });
+      _listAnimationController.forward();
     } else {
       _fetchExercises();
     }
   }
 
-  Future<void> _saveUnlockedProgress() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('unlocked_folders', _unlockedFolders);
+  void _onSearchChanged(String query) {
+    setState(() {
+      _filteredExercises = _exerciseNames
+          .where((name) => name.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+    // Restart animation for filtered results
+    _listAnimationController.reset();
+    _listAnimationController.forward();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchController.clear();
+        _filteredExercises = _exerciseNames;
+        _listAnimationController.reset();
+        _listAnimationController.forward();
+      }
+    });
+  }
+
+  Future<void> _fetchExercises() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final mainFolderId = widget.driveUrl
+          .split('/folders/')
+          .last
+          .split('?')
+          .first;
+
+      final subfolders = await _driveService.fetchSubfolders(mainFolderId);
+
+      final Map<String, String> folderIdMap = {};
+      final List<String> names = [];
+
+      for (var folder in subfolders) {
+        final name = folder['name']!;
+        final id = folder['id']!;
+        names.add(name);
+        folderIdMap[name] = id;
+      }
+
+      names.sort();
+
+      setState(() {
+        _exerciseNames = names;
+        _filteredExercises = names;
+        _folderIds = folderIdMap;
+        if (_unlockedFolders.isEmpty && names.isNotEmpty) {
+          _unlockedFolders = [names.first];
+        }
+        _isLoading = false;
+      });
+      _listAnimationController.forward();
+
+      if (names.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('imported_exercises', names);
+        await prefs.setString('folder_ids', jsonEncode(folderIdMap));
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to fetch categories: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   bool _isLocked(String folderName) {
-    // If we have no unlocked folders yet, unlock the first one
     if (_unlockedFolders.isEmpty && _exerciseNames.isNotEmpty) {
       _unlockedFolders.add(_exerciseNames.first);
       _saveUnlockedProgress();
     }
     return !_unlockedFolders.contains(folderName);
+  }
+
+  Future<void> _saveUnlockedProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('unlocked_folders', _unlockedFolders);
   }
 
   void _unlockNext(String currentFolder) {
@@ -94,101 +185,6 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
     }
   }
 
-  String _convertUrl(String url) {
-    // Handle Folders
-    if (url.contains('/folders/')) {
-      final regExp = RegExp(r'/folders/([a-zA-Z0-9-_]{25,})');
-      final match = regExp.firstMatch(url);
-      if (match != null && match.groupCount >= 1) {
-        final id = match.group(1);
-        // Using the embedded view which is MUCH easier to parse without login
-        return 'https://drive.google.com/embeddedfolderview?id=$id';
-      }
-    }
-    // Handle Spreadsheets
-    if (url.contains('/spreadsheets/d/')) {
-      final regExp = RegExp(r'/spreadsheets/d/([a-zA-Z0-9-_]+)');
-      final match = regExp.firstMatch(url);
-      if (match != null && match.groupCount >= 1) {
-        final id = match.group(1);
-        return 'https://docs.google.com/spreadsheets/d/$id/export?format=csv';
-      }
-    }
-    // Handle regular files
-    if (url.contains('/file/d/')) {
-      final regExp = RegExp(r'/file/d/([a-zA-Z0-9-_]+)');
-      final match = regExp.firstMatch(url);
-      if (match != null && match.groupCount >= 1) {
-        final id = match.group(1);
-        return 'https://drive.google.com/uc?export=download&id=$id';
-      }
-    }
-    return url;
-  }
-
-  Future<void> _fetchExercises() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final mainFolderId = widget.driveUrl
-          .split('/folders/')
-          .last
-          .split('?')
-          .first;
-
-      final subfolders = await _driveService.fetchSubfolders(mainFolderId);
-      
-      final Map<String, String> folderIdMap = {};
-      final List<String> names = [];
-
-      for (var folder in subfolders) {
-        final name = folder['name']!;
-        final id = folder['id']!;
-        names.add(name);
-        folderIdMap[name] = id;
-      }
-
-      names.sort();
-
-      setState(() {
-        _exerciseNames = names;
-        _folderIds = folderIdMap;
-        if (_unlockedFolders.isEmpty && names.isNotEmpty) {
-          _unlockedFolders = [names.first];
-        }
-        _isLoading = false;
-      });
-
-      if (names.isNotEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setStringList('imported_exercises', names);
-        await prefs.setString('folder_ids', jsonEncode(folderIdMap));
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to fetch categories: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _saveAndFinish() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('imported_exercises', _exerciseNames);
-
-      if (!mounted) return;
-
-      // We don't need a snackbar here as it's auto-saving
-      // Navigator.of(context).popUntil((route) => route.isFirst);
-    } catch (e) {
-      debugPrint('Failed to auto-save: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -196,119 +192,267 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: AppTheme.textDark,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          children: [
-            const Text(
-              'Exercises',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textDark,
-              ),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.refresh_rounded,
-              color: AppTheme.textDark,
-              size: 22,
-            ),
-            onPressed: _fetchExercises,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Container(
-              width: 44,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            return SizedBox(
               height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF7EBE8),
-                borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                alignment: Alignment.centerRight,
+                children: [
+                  // Title
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOutCubic,
+                    left: _isSearching ? -60 : 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 300),
+                        opacity: _isSearching ? 0.0 : 1.0,
+                        child: const Text(
+                          'Exercises',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.textDark,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Refresh Button
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOutCubic,
+                    right: _isSearching ? -60 : 54,
+                    top: 0,
+                    bottom: 0,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: _isSearching ? 0.0 : 1.0,
+                      child: IconButton(
+                        icon: const Icon(Icons.refresh_rounded, color: AppTheme.textDark, size: 22),
+                        onPressed: _isSearching ? null : _fetchExercises,
+                      ),
+                    ),
+                  ),
+
+                  // Search Field Expanding Background
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOutCubic,
+                    right: 54,
+                    left: _isSearching ? 0 : constraints.maxWidth - 54,
+                    top: 0,
+                    bottom: 0,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 300),
+                      opacity: _isSearching ? 1.0 : 0.0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppTheme.primary.withOpacity(0.15)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: SizedBox(
+                              width: constraints.maxWidth - 54,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Center(
+                                  child: TextField(
+                                    controller: _searchController,
+                                    autofocus: false, // Don't autofocus to avoid keyboard popping aggressively
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textDark,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      hintText: 'Find your workout...',
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      hintStyle: TextStyle(color: AppTheme.textLight, fontSize: 14),
+                                    ),
+                                    onChanged: _onSearchChanged,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Search Icon / Close Icon
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: GestureDetector(
+                      onTap: _toggleSearch,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: _isSearching ? AppTheme.primary : const Color(0xFFF7EBE8),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: _isSearching ? [
+                            BoxShadow(
+                              color: AppTheme.primary.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            )
+                          ] : [],
+                        ),
+                        child: Icon(
+                          _isSearching ? Icons.close : Icons.search,
+                          color: _isSearching ? Colors.white : AppTheme.textDark,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              child: IconButton(
-                icon: const Icon(
-                  Icons.search,
-                  color: AppTheme.textDark,
-                  size: 22,
-                ),
-                onPressed: () {},
-              ),
-            ),
-          ),
+            );
+          },
+        ),
+        actions: const [
+          SizedBox(width: 16),
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primary),
-            )
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : _error != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline_rounded,
-                      size: 64,
-                      color: AppTheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(_error!, textAlign: TextAlign.center),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _fetchExercises,
-                      child: const Text('Try Again'),
-                    ),
-                  ],
-                ),
+          ? _buildErrorView()
+          : _buildExerciseList(),
+    );
+  }
+
+
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, size: 64, color: AppTheme.error),
+            const SizedBox(height: 16),
+            Text(_error!, textAlign: TextAlign.center),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _fetchExercises,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _exerciseNames.length,
-              itemBuilder: (context, index) {
-                final name = _exerciseNames[index];
-                return _buildExerciseCard(name);
-              },
+              child: const Text('Try Again'),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExerciseList() {
+    if (_filteredExercises.isEmpty && _isSearching) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 500),
+              builder: (context, value, child) => Opacity(
+                opacity: value,
+                child: Transform.scale(scale: value, child: child),
+              ),
+              child: Icon(Icons.search_off_rounded, size: 80, color: AppTheme.textLight.withOpacity(0.3)),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No workouts found',
+              style: TextStyle(color: AppTheme.textLight, fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      itemCount: _filteredExercises.length,
+      itemBuilder: (context, index) {
+        final name = _filteredExercises[index];
+        return AnimatedBuilder(
+          animation: _listAnimationController,
+          builder: (context, child) {
+            final delay = index * 0.1;
+            final start = delay.clamp(0.0, 1.0);
+            final end = (delay + 0.5).clamp(0.0, 1.0);
+            
+            final opacity = CurvedAnimation(
+              parent: _listAnimationController,
+              curve: Interval(start, end, curve: Curves.easeOut),
+            ).value;
+            
+            final slide = CurvedAnimation(
+              parent: _listAnimationController,
+              curve: Interval(start, end, curve: Curves.easeOutBack),
+            ).value;
+
+            return Opacity(
+              opacity: opacity,
+              child: Transform.translate(
+                offset: Offset(0, 50 * (1 - slide)),
+                child: child,
+              ),
+            );
+          },
+          child: _buildExerciseCard(name),
+        );
+      },
     );
   }
 
   Widget _buildExerciseCard(String title) {
-    // Generate a different image for each category for better look
     final categoryImages = {
-      'arms':
-          'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
-      'back':
-          'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=2070',
-      'biceps':
-          'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070',
-      'cardio':
-          'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1974',
-      'chest':
-          'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070',
-      'glutes':
-          'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=2070',
-      'legs':
-          'https://images.unsplash.com/photo-1434608519344-49d77a699e1d?q=80&w=2070',
-      'shoulder':
-          'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
-      'triceps':
-          'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1974',
+      'arms': 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
+      'back': 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=2070',
+      'biceps': 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070',
+      'cardio': 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1974',
+      'chest': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070',
+      'glutes': 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=2070',
+      'legs': 'https://images.unsplash.com/photo-1434608519344-49d77a699e1d?q=80&w=2070',
+      'shoulder': 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
+      'triceps': 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1974',
     };
 
-    final imageUrl =
-        categoryImages[title.toLowerCase()] ??
+    final imageUrl = categoryImages[title.toLowerCase()] ??
         categoryImages.values.elementAt(title.length % categoryImages.length);
 
     return Container(
@@ -318,7 +462,7 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -327,26 +471,21 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Image Section
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             child: SizedBox(
-              height: 120,
+              height: 140,
               width: double.infinity,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
                   Image.network(imageUrl, fit: BoxFit.cover),
-                  // Dark gradient overlay for badges
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.3),
-                          Colors.transparent,
-                        ],
+                        colors: [Colors.black.withOpacity(0.3), Colors.transparent],
                         stops: const [0.0, 0.4],
                       ),
                     ),
@@ -359,10 +498,7 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.9),
                             borderRadius: BorderRadius.circular(20),
@@ -383,11 +519,7 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
                             color: Colors.white.withOpacity(0.9),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
-                            Icons.bookmark_border_rounded,
-                            size: 18,
-                            color: Color(0xFF1F2937),
-                          ),
+                          child: const Icon(Icons.bookmark_border_rounded, size: 18, color: Color(0xFF1F2937)),
                         ),
                       ],
                     ),
@@ -396,14 +528,11 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
               ),
             ),
           ),
-
-          // Content Section
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // RAW GOOGLE DRIVE NAME
                 Text(
                   title,
                   style: const TextStyle(
@@ -423,49 +552,42 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // Stats Row
                 Row(
                   children: [
                     _buildStat(Icons.timer_outlined, '15 min'),
                     const SizedBox(width: 20),
-                    _buildStat(
-                      Icons.local_fire_department_outlined,
-                      '120 kcal',
-                    ),
+                    _buildStat(Icons.local_fire_department_outlined, '120 kcal'),
                     const SizedBox(width: 20),
                     _buildStat(Icons.bar_chart_rounded, 'Intermediate'),
                   ],
                 ),
                 const SizedBox(height: 24),
-
-                // Action Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _isLocked(title) ? null : () async {
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ExerciseDetailScreen(
-                            folderName: title,
-                            folderId: _folderIds[title],
-                          ),
-                        ),
-                      );
-                      
-                      if (result == true) {
-                        _unlockNext(title);
-                      }
-                    },
+                    onPressed: _isLocked(title)
+                        ? null
+                        : () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ExerciseDetailScreen(
+                                  folderName: title,
+                                  folderId: _folderIds[title],
+                                ),
+                              ),
+                            );
+
+                            if (result == true) {
+                              _unlockNext(title);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isLocked(title) ? Colors.grey[300] : AppTheme.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -473,16 +595,13 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
                         Text(
                           _isLocked(title) ? 'LOCKED' : 'START EXERCISE',
                           style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 14, 
+                            fontWeight: FontWeight.w900, 
                             letterSpacing: 1.2,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Icon(
-                          _isLocked(title) ? Icons.lock_outline_rounded : Icons.play_circle_fill_rounded, 
-                          size: 20
-                        ),
+                        Icon(_isLocked(title) ? Icons.lock_outline_rounded : Icons.play_circle_fill_rounded, size: 20),
                       ],
                     ),
                   ),
@@ -502,11 +621,7 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> {
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF374151),
-          ),
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
         ),
       ],
     );

@@ -109,24 +109,26 @@ class _PhotoComparisonSliderState extends State<PhotoComparisonSlider> {
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.chevron_left_rounded,
-                      size: 20,
-                      color: AppTheme.textDark,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: totalWidth * _dividerPosition - 2,
-                  top: widget.height / 2 - 18,
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    color: Colors.transparent,
-                    child: const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 20,
-                      color: AppTheme.textDark,
+                    child: const Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned(
+                          left: 1,
+                          child: Icon(
+                            Icons.chevron_left_rounded,
+                            size: 20,
+                            color: AppTheme.textDark,
+                          ),
+                        ),
+                        Positioned(
+                          right: 1,
+                          child: Icon(
+                            Icons.chevron_right_rounded,
+                            size: 20,
+                            color: AppTheme.textDark,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

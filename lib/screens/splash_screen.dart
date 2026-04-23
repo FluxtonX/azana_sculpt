@@ -16,57 +16,101 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
+  late Animation<double> _logoFade;
+  late Animation<double> _logoScale;
+  late Animation<Offset> _logoSlide;
+  late Animation<double> _textFade;
+  late Animation<Offset> _textSlide;
+  late Animation<double> _bgScale;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2500),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    // Background slow zoom (Ken Burns effect)
+    _bgScale = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.linear));
+
+    // Logo animations
+    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.65, curve: Curves.easeIn),
+        curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
       ),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+    _logoScale = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack),
+        curve: const Interval(0.0, 0.5, curve: Curves.elasticOut),
       ),
     );
+
+    _logoSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.0, 0.5, curve: Curves.easeOutBack),
+          ),
+        );
+
+    // Text animations (staggered)
+    _textFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.4, 0.8, curve: Curves.easeIn),
+      ),
+    );
+
+    _textSlide = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.4, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _controller.forward();
 
-    // Navigate after 3 seconds based on auth state + role
-    Timer(const Duration(seconds: 3), () async {
-      if (!mounted) return;
-      final user = AuthService().currentUser;
-      if (user == null) {
-        Navigator.of(context).pushReplacementNamed('/welcome');
-        return;
-      }
-      // User is logged in — check role
-      final profile = await DatabaseService().getUserProfile(user.uid);
+    // Navigate after animation and state checks
+    _startNavigationTimer();
+  }
+
+  void _startNavigationTimer() {
+    Timer(const Duration(seconds: 4), () async {
       if (!mounted) return;
 
-      if (profile == null) {
-        // No profile yet → go to onboarding
-        Navigator.of(context).pushReplacementNamed('/onboarding');
-      } else if (profile.role == 'coach') {
-        // Coach → Coach Dashboard
-        Navigator.of(context).pushReplacementNamed('/coach');
-      } else if (profile.height == null) {
-        // Client but onboarding not finished
-        Navigator.of(context).pushReplacementNamed('/onboarding');
-      } else {
-        // Client → Home
-        Navigator.of(context).pushReplacementNamed('/home');
+      try {
+        final user = AuthService().currentUser;
+
+        if (user == null) {
+          if (mounted) Navigator.of(context).pushReplacementNamed('/welcome');
+          return;
+        }
+
+        final profile = await DatabaseService().getUserProfile(user.uid);
+
+        if (!mounted) return;
+
+        final bool isOnboardingComplete =
+            profile != null && profile.height != null && profile.age != null;
+
+        if (!isOnboardingComplete) {
+          Navigator.of(context).pushReplacementNamed('/onboarding');
+        } else if (profile?.role == 'coach') {
+          Navigator.of(context).pushReplacementNamed('/coach');
+        } else {
+          Navigator.of(context).pushReplacementNamed('/home');
+        }
+      } catch (e) {
+        debugPrint("Splash Navigation Error: $e");
+        if (mounted) Navigator.of(context).pushReplacementNamed('/onboarding');
       }
     });
   }
@@ -80,83 +124,166 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/splash.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // ── App Logo ──
-              ScaleTransition(
-                scale: _scaleAnimation,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.textDark.withOpacity(0.12),
-                        blurRadius: 30,
-                        offset: const Offset(0, 15),
-                      ),
-                    ],
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // ── Background Image with Ken Burns effect ──
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _bgScale,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _bgScale.value,
+                  child: Image.asset(
+                    'assets/images/splash.png',
+                    fit: BoxFit.cover,
                   ),
-                  child: Center(
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryLight.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          width: 80,
-                          height: 80,
-                          fit: BoxFit.contain,
+                );
+              },
+            ),
+          ),
+
+          // ── Gradient Overlay for readability ──
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.1),
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.6),
+                  ],
+                  stops: const [0.0, 0.6, 1.0],
+                ),
+              ),
+            ),
+          ),
+
+          // ── Main Content ──
+          Positioned.fill(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // ── Animated Logo ──
+                FadeTransition(
+                  opacity: _logoFade,
+                  child: ScaleTransition(
+                    scale: _logoScale,
+                    child: SlideTransition(
+                      position: _logoSlide,
+                      child: Container(
+                        width: 170,
+                        height: 170,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(54),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 30,
+                              offset: const Offset(0, 15),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(36),
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              width: 115,
+                              height: 115,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 48),
+                const SizedBox(height: 50),
 
-              // ── App Name ──
-              Text(
-                'Azana Sculpt',
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: AppTheme.textDark,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
+                // ── Animated Text Content ──
+                FadeTransition(
+                  opacity: _textFade,
+                  child: SlideTransition(
+                    position: _textSlide,
+                    child: Column(
+                      children: [
+                        Text(
+                          'Azana Sculpt',
+                          style: TextStyle(
+                            fontSize: 42,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: -1.5,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(99),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: Text(
+                            'TRANSFORM YOUR FITNESS JOURNEY',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2.0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-
-              // ── Tagline ──
-              Text(
-                'Transform Your Fitness Journey',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textMedium,
-                  letterSpacing: 0.2,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+
+          // ── Bottom Loading Progress ──
+          Positioned(
+            bottom: 60,
+            left: 40,
+            right: 40,
+            child: FadeTransition(
+              opacity: _textFade,
+              child: Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(99),
+                    child: LinearProgressIndicator(
+                      backgroundColor: AppTheme.primary.withOpacity(0.1),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppTheme.primary,
+                      ),
+                      minHeight: 4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Initializing Your Experience...',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

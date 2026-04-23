@@ -14,24 +14,29 @@ class AgeStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const StepHeader(
-          title: "How old are you?",
-          subtitle: "Age helps us tailor the intensity of your workouts",
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const StepHeader(
+              title: "How old are you?",
+              subtitle: "Age helps us tailor the intensity of your workouts",
+            ),
+            const SizedBox(height: 60),
+            Center(
+              child: VerticalNumberPicker(
+                min: 10,
+                max: 100,
+                initialValue: selectedAge,
+                onChanged: onAgeChanged,
+              ),
+            ),
+            const SizedBox(height: 40),
+          ],
         ),
-        const Spacer(),
-        Center(
-          child: VerticalNumberPicker(
-            min: 10,
-            max: 100,
-            initialValue: selectedAge,
-            onChanged: onAgeChanged,
-          ),
-        ),
-        const Spacer(flex: 2),
-      ],
+      ),
     );
   }
 }

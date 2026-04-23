@@ -15,7 +15,6 @@ import '../../models/badge_model.dart';
 import '../../widgets/streak_banner.dart';
 import '../../widgets/daily_motivation_card.dart';
 import '../../widgets/community_proof_strip.dart';
-import '../messages/messages_screen.dart';
 import '../progress/progress_screen.dart';
 import '../meals/meals_screen.dart';
 import '../profile/profile_screen.dart';
@@ -38,6 +37,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _currentIndex = 0;
   File? _localImageFile;
+  double _fitnessScore = 0.0; // Added for dynamic fitness score
 
   // Stream Caching to prevent flickering
   Stream<UserModel?>? _userStream;
@@ -92,10 +92,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     // Load from cache first (instant)
     final cached = await StreakService().loadStreak();
+    final prefs = await SharedPreferences.getInstance();
+    final cachedScore = prefs.getDouble('fitness_score') ?? 0.0;
+
     if (mounted) {
       setState(() {
         _streak = cached;
         _streakLoaded = true;
+        _fitnessScore = cachedScore;
       });
     }
 
@@ -133,18 +137,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.surface,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          _buildHomeTab(),
-          ExerciseFetchScreen(
-            driveUrl:
-                'https://drive.google.com/drive/folders/1aCGjE-q2mHanGuS0JecipGHZ3aqAljR0?usp=drive_link',
-          ),
-          const MealsScreen(),
-          const ProgressScreen(),
-          const ProfileScreen(),
-        ],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 400),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.02, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: Container(
+          key: ValueKey<int>(_currentIndex),
+          child: [
+            _buildHomeTab(),
+            ExerciseFetchScreen(
+              driveUrl:
+                  'https://drive.google.com/drive/folders/1aCGjE-q2mHanGuS0JecipGHZ3aqAljR0?usp=drive_link',
+            ),
+            const MealsScreen(),
+            const ProgressScreen(),
+            const ProfileScreen(),
+          ][_currentIndex],
+        ),
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
@@ -190,7 +211,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       _buildHeader(userSnapshot.data),
                       const SizedBox(height: 24),
 
-                      const FitnessScoreCard(),
+                      FitnessScoreCard(
+                        score: 0,
+                        targetScore: _fitnessScore,
+                      ),
 
                       const SizedBox(height: 32),
                       const Text(
@@ -375,25 +399,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildTodayWorkoutCard(ProgramModel? program) {
-    if (program == null) {
-      return _buildEmptyWorkoutCard();
-    }
-
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    // Use getNextWorkoutStream to always suggest the first uncompleted workout
     return StreamBuilder<WorkoutSession?>(
-      stream: DatabaseService().getNextWorkoutStream(userId, program.id),
+      stream: program != null
+          ? DatabaseService().getNextWorkoutStream(userId, program.id)
+          : Stream.value(null),
       builder: (context, snapshot) {
         final workout = snapshot.data;
 
-        // If all workouts are done, check if we should show a completion message or the last workout
-        final title = workout?.title ?? "Program Complete! 🎉";
+        // If all workouts are done or no program active, show default labels
+        final title = workout?.title ?? "Full Body Strength";
         final exerciseCount = workout?.exercises.length ?? 0;
-        final subtitle = workout != null
-            ? '$exerciseCount Exercises • ${workout.totalDuration}'
-            : "You have finished all sessions in this program.";
-        final duration = workout?.totalDuration ?? "--";
+        final duration = workout?.totalDuration ?? "45 min";
 
         return Container(
           decoration: BoxDecoration(
@@ -410,7 +428,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Banner Image with Pill
+              // Top Banner Image with Pll
               Stack(
                 children: [
                   ClipRRect(
@@ -418,11 +436,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       topLeft: Radius.circular(24),
                       topRight: Radius.circular(24),
                     ),
-                    child: Image.network(
-                      'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=2070', // Example fitness image
-                      height: 140,
+                    child: Container(
                       width: double.infinity,
-                      fit: BoxFit.cover,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFD3888E), Color(0xFFC87E84)],
+                        ),
+                      ),
+                      child: Image.asset(
+                        'assets/home/todayWorkout.png',
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   Positioned(
@@ -504,44 +530,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                     SizedBox(
                       width: double.infinity,
-                      child: _PressableButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ExerciseFetchScreen(
-                                driveUrl:
-                                    'https://drive.google.com/drive/folders/1aCGjE-q2mHanGuS0JecipGHZ3aqAljR0',
-                              ),
-                            ),
-                          );
+                      child: WorkoutStartButton(
+                        onComplete: () {
+                          setState(() {
+                            _currentIndex = 1;
+                          });
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD4847A),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                'Start Workout',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                size: 14,
-                                color: Colors.white,
-                              ),
-                            ],
-                          ),
-                        ),
                       ),
                     ),
                   ],
@@ -551,41 +545,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildEmptyWorkoutCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.divider.withOpacity(0.5)),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.fitness_center_rounded,
-            size: 48,
-            color: AppTheme.textLight,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No Active Program',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textDark,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Connect with a coach to get your custom program started.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textLight),
-          ),
-        ],
-      ),
     );
   }
 
@@ -602,8 +561,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 pillText: '↑ 3 this week',
                 pillColor: const Color(0xFF2EB87D),
                 pillBgColor: const Color(0xFFE6F5E9),
-                imageUrl:
-                    'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=2070',
+                assetsImage: 'assets/home/firstCard.png',
               ),
             ),
             const SizedBox(width: 16),
@@ -615,8 +573,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 pillText: '↓ 1.5% this week',
                 pillColor: const Color(0xFFD32F2F),
                 pillBgColor: const Color(0xFFFFEBEE),
-                imageUrl:
-                    'https://images.unsplash.com/photo-1518611012118-696072aa579a?q=80&w=2070',
+                assetsImage: 'assets/home/progressSummaryWeightchangePic.png',
               ),
             ),
           ],
@@ -632,8 +589,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 pillText: 'Best: 14 days',
                 pillColor: const Color(0xFFF57C00),
                 pillBgColor: const Color(0xFFFFF3E0),
-                imageUrl:
-                    'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
+                assetsImage:
+                    'assets/home/skg-photography-nYNmiwczfIw-unsplash 2.png',
               ),
             ),
             const SizedBox(width: 16),
@@ -645,8 +602,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 pillText: '↑ 5% this week',
                 pillColor: const Color(0xFF2EB87D),
                 pillBgColor: const Color(0xFFE6F5E9),
-                imageUrl:
-                    'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=2070',
+                assetsImage: 'assets/home/ProgressSummary.png',
               ),
             ),
           ],
@@ -662,7 +618,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required String pillText,
     required Color pillColor,
     required Color pillBgColor,
-    required String imageUrl,
+    String? imageUrl,
+    String? assetsImage,
   }) {
     return Container(
       height: 180,
@@ -685,11 +642,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(20),
               child: Stack(
                 children: [
-                  Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
+                  Opacity(
+                    opacity: 0.85,
+                    child: assetsImage != null
+                        ? Image.asset(
+                            assetsImage,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: AppTheme.primary.withOpacity(0.05),
+                                ),
+                          )
+                        : (imageUrl != null && imageUrl.isNotEmpty)
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: AppTheme.primary.withOpacity(0.05),
+                                ),
+                          )
+                        : Container(color: AppTheme.primary.withOpacity(0.05)),
                   ),
                   Container(
                     decoration: BoxDecoration(
@@ -697,8 +674,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         begin: Alignment.bottomLeft,
                         end: Alignment.topRight,
                         colors: [
-                          Colors.white.withOpacity(0.95),
-                          Colors.white.withOpacity(0.4),
+                          Colors.white.withOpacity(0.5),
+                          Colors.transparent,
                         ],
                         stops: const [0.4, 1.0],
                       ),
@@ -766,105 +743,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ],
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCoachMessageCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: AppTheme.primaryGradient,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withOpacity(0.28),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.chat_bubble_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Text(
-                  'Message from your coach',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(5),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Text(
-                  '1',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '\"Great progress this week! Keep up the consistency. Remember, small daily improvements lead to big results. 💪\"',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withOpacity(0.9),
-              height: 1.55,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          const SizedBox(height: 20),
-          _PressableButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const MessagesScreen()),
-              );
-            },
-
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'Reply to Coach',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: AppTheme.primary,
-                ),
-              ),
             ),
           ),
         ],
@@ -1798,5 +1676,118 @@ class _BadgeUnlockDialog extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class WorkoutStartButton extends StatefulWidget {
+  final VoidCallback onComplete;
+  const WorkoutStartButton({super.key, required this.onComplete});
+
+  @override
+  State<WorkoutStartButton> createState() => _WorkoutStartButtonState();
+}
+
+class _WorkoutStartButtonState extends State<WorkoutStartButton> {
+  String _state = 'idle'; // idle, loading, success
+
+  void _start() async {
+    setState(() => _state = 'loading');
+    
+    // Simulate loading
+    await Future.delayed(const Duration(milliseconds: 1800));
+    
+    if (mounted) {
+      setState(() => _state = 'success');
+    }
+    
+    // Show success for a moment
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    if (mounted) {
+      widget.onComplete();
+      // Reset after a delay so it's ready when user comes back
+      await Future.delayed(const Duration(seconds: 1));
+      if (mounted) setState(() => _state = 'idle');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        return Center(
+          child: GestureDetector(
+            onTap: _state == 'idle' ? _start : null,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOutBack,
+              width: _state == 'idle' ? maxWidth : 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: _state == 'success' ? const Color(0xFF2EB87D) : const Color(0xFFD4847A),
+                borderRadius: BorderRadius.circular(_state == 'idle' ? 16 : 28),
+                boxShadow: [
+                  BoxShadow(
+                    color: (_state == 'success' ? const Color(0xFF2EB87D) : const Color(0xFFD4847A)).withOpacity(0.4),
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: _buildContent(),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContent() {
+    if (_state == 'idle') {
+      return const FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          key: ValueKey('idle'),
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Start Workout',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+            ),
+            SizedBox(width: 8),
+            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+          ],
+        ),
+      );
+    } else if (_state == 'loading') {
+      return const SizedBox(
+        key: ValueKey('loading'),
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          color: Colors.white,
+          strokeWidth: 3,
+        ),
+      );
+    } else {
+      return const Icon(
+        key: ValueKey('success'),
+        Icons.check_rounded,
+        color: Colors.white,
+        size: 32,
+      );
+    }
   }
 }

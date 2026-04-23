@@ -48,6 +48,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   List<int> _completedSets = [];
   int _currentIndex = 0;
   final GoogleDriveService _driveService = GoogleDriveService();
+  final _ExerciseVideoCache _globalCache = _ExerciseVideoCache();
 
   bool _isResting = false;
   int _remainingRestSeconds = 0;
@@ -58,6 +59,10 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   String _videoLoadingStatus = 'Fetch This Video Now';
   bool _isCurrentVideoCached = false;
   String? _videoErrorMessage;
+
+  // Track download status for the list
+  final Map<String, int> _downloadProgress = {};
+  final Set<String> _cachedExerciseIds = {};
 
   late AnimationController _slideCtrl;
   late Animation<Offset> _slideAnim;
@@ -71,11 +76,13 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     );
     _configureSlideAnimation(isForward: true);
     _loadExercises();
+    _checkInitialCacheStatus();
   }
 
   @override
   void dispose() {
     _driveService.dispose();
+    _globalCache.dispose();
     _slideCtrl.dispose();
     _restTimer?.cancel();
     super.dispose();
@@ -86,6 +93,19 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   bool get _hasPreviousExercise => _currentIndex > 0;
   bool get _hasNextExercise => _currentIndex < _exercises.length - 1;
   bool get _isBusy => _isResting || _isTransitioningExercise;
+
+  Future<void> _checkInitialCacheStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedPathsRaw = prefs.getString(_ExerciseVideoCache._prefsKey);
+    if (savedPathsRaw != null) {
+      final Map<String, dynamic> decoded = jsonDecode(savedPathsRaw);
+      if (mounted) {
+        setState(() {
+          _cachedExerciseIds.addAll(decoded.keys);
+        });
+      }
+    }
+  }
 
   void _startVideoLoading({required bool shouldLoad}) {
     if (!shouldLoad) {
@@ -102,6 +122,35 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     _videoLoadingStatus = 'Fetch This Video Now';
     _isCurrentVideoCached = false;
     _videoErrorMessage = null;
+
+    // Auto-pre-fetch next video when one starts loading
+    if (_hasNextExercise) {
+      _preFetchVideo(_currentIndex + 1);
+    }
+  }
+
+  Future<void> _preFetchVideo(int index) async {
+    if (index < 0 || index >= _exercises.length) return;
+    final exercise = _exercises[index];
+    if (exercise.videoUrl == null || _cachedExerciseIds.contains(exercise.id)) return;
+
+    try {
+      await _globalCache.getOrDownloadVideo(
+        exerciseId: exercise.id,
+        videoUrl: exercise.videoUrl!,
+        onProgress: (progress, status, {required fromCache}) {
+          if (!mounted) return;
+          setState(() {
+            _downloadProgress[exercise.id] = progress;
+            if (fromCache || progress >= 100) {
+              _cachedExerciseIds.add(exercise.id);
+            }
+          });
+        },
+      );
+    } catch (e) {
+      debugPrint('Pre-fetch failed for ${exercise.name}: $e');
+    }
   }
 
   void _handleVideoLoadingProgress(
@@ -115,6 +164,9 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
       _videoLoadingProgress = progress.clamp(0, 100);
       _videoLoadingStatus = status;
       _isCurrentVideoCached = fromCache;
+      if (fromCache || progress >= 100) {
+        _cachedExerciseIds.add(_currentExercise.id);
+      }
     });
   }
 
@@ -289,6 +341,14 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     _applyCompletedSet();
   }
 
+  Future<void> _incrementFitnessScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentScore = prefs.getDouble('fitness_score') ?? 0.0;
+    // Increase score by 5 per completed exercise, capped at 100 for now
+    final newScore = (currentScore + 5).clamp(0.0, 100.0);
+    await prefs.setDouble('fitness_score', newScore);
+  }
+
   void _applyCompletedSet() {
     if (_exercises.isEmpty) return;
 
@@ -297,6 +357,11 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
       0,
       exercise.sets,
     );
+
+    if (nextCompleted == exercise.sets && _completedSetCountFor(exercise) < exercise.sets) {
+      // First time completing all sets for this exercise
+      _incrementFitnessScore();
+    }
 
     setState(() {
       _completedSets[_currentIndex] = nextCompleted;
@@ -592,6 +657,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
                 onReady: _handleVideoReady,
                 onLoadingProgress: _handleVideoLoadingProgress,
                 onError: _handleVideoError,
+                cache: _globalCache,
               )
             else
               const Center(
@@ -799,37 +865,29 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
           const SizedBox(height: 16),
           Row(
             children: List.generate(exercise.sets, (index) {
-              final isFilled = index < completedSets;
-              final isCurrent = !isComplete && index == completedSets;
+              final isDone = index < completedSets;
+              final isActive = index == completedSets && !isComplete;
 
               return Expanded(
                 child: Container(
                   height: 10,
                   margin: EdgeInsets.only(
-                    right: index == exercise.sets - 1 ? 0 : 8,
+                    right: index < exercise.sets - 1 ? 8 : 0,
                   ),
                   decoration: BoxDecoration(
-                    color: isFilled
+                    color: isDone
                         ? AppTheme.primary
-                        : isCurrent
-                        ? AppTheme.primary.withValues(alpha: 0.32)
+                        : isActive
+                        ? AppTheme.primary.withValues(alpha: 0.3)
                         : _surfaceStrongColor,
                     borderRadius: BorderRadius.circular(999),
+                    border: isActive
+                        ? Border.all(color: AppTheme.primary.withValues(alpha: 0.5))
+                        : null,
                   ),
                 ),
               );
             }),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            isComplete
-                ? 'All sets complete. Move forward when you are ready.'
-                : 'Complete each set to unlock the next step.',
-            style: const TextStyle(
-              color: _textMuted,
-              fontSize: 13,
-              height: 1.4,
-            ),
           ),
         ],
       ),
@@ -837,99 +895,100 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   }
 
   Widget _buildRestCard(ExerciseModel exercise) {
-    final progress = _activeRestDuration == 0
-        ? 0.0
-        : 1 - (_remainingRestSeconds / _activeRestDuration);
-    final nextLabel = _restPhase == _RestPhase.exerciseComplete
-        ? (_hasNextExercise ? 'Next exercise' : 'Workout finish')
-        : 'Set ${(_completedSetCountFor(exercise) + 2).clamp(1, exercise.sets)}';
+    final progress = 1.0 - (_remainingRestSeconds / _activeRestDuration);
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF19181A),
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primary.withValues(alpha: 0.1),
+            Colors.transparent,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.28)),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.14),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.timer_outlined,
-                  color: AppTheme.primary,
-                ),
+              const Icon(
+                Icons.timer_outlined,
+                color: AppTheme.primary,
+                size: 20,
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Rest Timer',
-                      style: TextStyle(
-                        color: _textPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Recover before $nextLabel',
-                      style: const TextStyle(
-                        color: _textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(width: 10),
               Text(
-                '${_remainingRestSeconds}s',
+                _restPhase == _RestPhase.exerciseComplete
+                    ? 'Exercise Complete Rest'
+                    : 'Rest for next set',
                 style: const TextStyle(
                   color: _textPrimary,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: _skipRest,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'SKIP',
+                    style: TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: progress.clamp(0.0, 1.0),
-              minHeight: 8,
-              color: AppTheme.primary,
-              backgroundColor: _surfaceStrongColor,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: _skipRest,
-              style: TextButton.styleFrom(
-                foregroundColor: _textPrimary,
-                backgroundColor: Colors.white.withValues(alpha: 0.06),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$_remainingRestSeconds',
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.primary,
+                  height: 1,
                 ),
               ),
-              child: const Text(
-                'Skip Rest',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8, left: 4),
+                child: Text(
+                  'sec',
+                  style: TextStyle(
+                    color: _textMuted,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          LinearProgressIndicator(
+            value: progress,
+            backgroundColor: _surfaceStrongColor,
+            color: AppTheme.primary,
+            minHeight: 6,
+            borderRadius: BorderRadius.circular(999),
           ),
         ],
       ),
@@ -937,43 +996,32 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   }
 
   Widget _buildMainAction(ExerciseModel exercise) {
-    final isDisabled = _isBusy;
+    final label = _mainActionLabel(exercise);
+    final icon = _mainActionIcon(exercise);
+    final isDone = _isExerciseComplete(exercise);
 
     return SizedBox(
       width: double.infinity,
-      height: 62,
       child: ElevatedButton(
-        onPressed: isDisabled ? null : _completeSet,
+        onPressed: _isBusy ? null : _completeSet,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primary,
-          disabledBackgroundColor: AppTheme.primary.withValues(alpha: 0.45),
+          backgroundColor: isDone ? _surfaceStrongColor : AppTheme.primary,
           foregroundColor: _textPrimary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
           elevation: 0,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (_isTransitioningExercise)
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: _textPrimary,
-                ),
-              )
-            else
-              Icon(_mainActionIcon(exercise), color: _textPrimary),
+            Icon(icon, size: 22),
             const SizedBox(width: 12),
             Text(
-              _mainActionLabel(exercise),
+              label.toUpperCase(),
               style: const TextStyle(
-                color: _textPrimary,
                 fontSize: 16,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
               ),
             ),
           ],
@@ -983,19 +1031,19 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   }
 
   Widget _buildNavigationButtons() {
-    final canGoPrevious = _hasPreviousExercise && !_isBusy;
+    final canGoBack = _hasPreviousExercise && !_isBusy;
     final canSkip = !_isBusy;
 
     return Row(
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: canGoPrevious ? _goToPreviousExercise : null,
+            onPressed: canGoBack ? _goToPreviousExercise : null,
             style: OutlinedButton.styleFrom(
               foregroundColor: _textPrimary,
               disabledForegroundColor: _textMuted,
               side: BorderSide(
-                color: canGoPrevious
+                color: canGoBack
                     ? _borderColor
                     : _borderColor.withValues(alpha: 0.5),
               ),
@@ -1053,12 +1101,12 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
         ),
         const SizedBox(height: 14),
         ...List.generate(_exercises.length, (index) {
-          final isDone = _completedSets[index] >= _exercises[index].sets;
+          final exercise = _exercises[index];
+          final isDone = _completedSets[index] >= exercise.sets;
           final isCurrent = index == _currentIndex;
-          final completedSets = _completedSets[index].clamp(
-            0,
-            _exercises[index].sets,
-          );
+          final completedSets = _completedSets[index].clamp(0, exercise.sets);
+          final progress = _downloadProgress[exercise.id];
+          final isCached = _cachedExerciseIds.contains(exercise.id);
 
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
@@ -1105,7 +1153,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _exercises[index].name,
+                        exercise.name,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: isCurrent
@@ -1118,17 +1166,53 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
                       Text(
                         isDone
                             ? 'Completed'
-                            : '$completedSets/${_exercises[index].sets} sets complete',
+                            : '$completedSets/${exercise.sets} sets complete',
                         style: const TextStyle(color: _textMuted, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
+                if (exercise.videoUrl != null)
+                  _buildDownloadIndicator(exercise.id, progress, isCached),
               ],
             ),
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildDownloadIndicator(String id, int? progress, bool isCached) {
+    if (isCached) {
+      return const Icon(
+        Icons.check_circle_outline_rounded,
+        color: AppTheme.primary,
+        size: 20,
+      );
+    }
+
+    if (progress != null && progress < 100) {
+      return SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          value: progress / 100,
+          strokeWidth: 2,
+          color: AppTheme.primary,
+          backgroundColor: _surfaceStrongColor,
+        ),
+      );
+    }
+
+    return IconButton(
+      icon: const Icon(Icons.download_for_offline_rounded, size: 22),
+      color: _textMuted,
+      onPressed: () {
+        final index = _exercises.indexWhere((e) => e.id == id);
+        if (index != -1) _preFetchVideo(index);
+      },
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
     );
   }
 
@@ -1160,10 +1244,12 @@ class _VideoPlayerHero extends StatefulWidget {
   final void Function(int progress, String status, {required bool fromCache})?
   onLoadingProgress;
   final ValueChanged<String>? onError;
+  final _ExerciseVideoCache cache;
 
   const _VideoPlayerHero({
     required this.exerciseId,
     required this.videoUrl,
+    required this.cache,
     this.onReady,
     this.onLoadingProgress,
     this.onError,
@@ -1175,7 +1261,6 @@ class _VideoPlayerHero extends StatefulWidget {
 }
 
 class _VideoPlayerHeroState extends State<_VideoPlayerHero> {
-  final _videoCache = _ExerciseVideoCache();
   VideoPlayerController? _controller;
   bool _initialized = false;
   String? _errorMessage;
@@ -1191,7 +1276,7 @@ class _VideoPlayerHeroState extends State<_VideoPlayerHero> {
     var fromCache = false;
 
     try {
-      final result = await _videoCache.getOrDownloadVideo(
+      final result = await widget.cache.getOrDownloadVideo(
         exerciseId: widget.exerciseId,
         videoUrl: widget.videoUrl,
         onProgress: (progress, status, {required fromCache}) {
@@ -1241,7 +1326,6 @@ class _VideoPlayerHeroState extends State<_VideoPlayerHero> {
   @override
   void dispose() {
     _controller?.dispose();
-    _videoCache.dispose();
     super.dispose();
   }
 
