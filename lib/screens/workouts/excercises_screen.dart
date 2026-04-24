@@ -4,10 +4,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_theme.dart';
 import 'exercise_detail_screen.dart';
 import '../../services/google_drive_service.dart';
+import 'workout_complete_screen.dart';
 
 class ExerciseFetchScreen extends StatefulWidget {
   final String driveUrl;
-  const ExerciseFetchScreen({super.key, required this.driveUrl});
+  final VoidCallback? onProgressUpdated;
+  final VoidCallback? onNavigateHome;
+  final VoidCallback? onNavigateProgress;
+
+  const ExerciseFetchScreen({
+    super.key,
+    required this.driveUrl,
+    this.onProgressUpdated,
+    this.onNavigateHome,
+    this.onNavigateProgress,
+  });
 
   @override
   State<ExerciseFetchScreen> createState() => _ExerciseFetchScreenState();
@@ -578,8 +589,15 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                               ),
                             );
 
-                            if (result == true) {
+                            if (result is WorkoutCompletionAction) {
                               _unlockNext(title);
+                              widget.onProgressUpdated?.call();
+                              if (result == WorkoutCompletionAction.backHome) {
+                                widget.onNavigateHome?.call();
+                              } else if (result ==
+                                  WorkoutCompletionAction.viewProgress) {
+                                widget.onNavigateProgress?.call();
+                              }
                             }
                           },
                     style: ElevatedButton.styleFrom(

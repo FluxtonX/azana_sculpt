@@ -174,8 +174,8 @@ class _SplashScreenState extends State<SplashScreen>
                     child: SlideTransition(
                       position: _logoSlide,
                       child: Container(
-                        width: 170,
-                        height: 170,
+                        width: 150,
+                        height: 150,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(54),
@@ -189,11 +189,11 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         child: Center(
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(36),
+                            borderRadius: BorderRadius.circular(20),
                             child: Image.asset(
                               'assets/images/logo.png',
-                              width: 115,
-                              height: 115,
+                              width: 80,
+                              height: 80,
                               fit: BoxFit.cover,
                             ),
                           ),

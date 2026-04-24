@@ -6,6 +6,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_theme.dart';
+import '../../services/streak_service.dart';
+import '../../services/workout_progress_service.dart';
 import '../../widgets/animated_progress_bar.dart';
 import '../../widgets/photo_comparison_slider.dart';
 
@@ -20,11 +22,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
   String? _beforePath;
   String? _afterPath;
   final ImagePicker _picker = ImagePicker();
+  int _completedWorkouts = 0;
+  int _currentStreak = 0;
+  int _fitnessScore = 0;
 
   @override
   void initState() {
     super.initState();
     _loadPhotos();
+    _loadOverviewStats();
   }
 
   Future<void> _loadPhotos() async {
@@ -32,6 +38,17 @@ class _ProgressScreenState extends State<ProgressScreen> {
     setState(() {
       _beforePath = prefs.getString('before_photo');
       _afterPath = prefs.getString('after_photo');
+    });
+  }
+
+  Future<void> _loadOverviewStats() async {
+    final streak = await StreakService().loadStreak();
+    final progress = await WorkoutProgressService().loadProgress();
+    if (!mounted) return;
+    setState(() {
+      _completedWorkouts = progress.completedWorkouts;
+      _currentStreak = streak.currentStreak;
+      _fitnessScore = progress.fitnessScore.round();
     });
   }
 
@@ -225,11 +242,32 @@ class _ProgressScreenState extends State<ProgressScreen> {
   Widget _buildStatsRow() {
     return Row(
       children: [
-        Expanded(child: _buildStatCard(Icons.trending_down_rounded, '-2.5kg', 'Lost', const Color(0xFF5B8DEF))),
+        Expanded(
+          child: _buildStatCard(
+            Icons.stars_rounded,
+            '$_fitnessScore',
+            'Score',
+            const Color(0xFF5B8DEF),
+          ),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(Icons.calendar_today_rounded, '75', 'Days', const Color(0xFF2EB87D))),
+        Expanded(
+          child: _buildStatCard(
+            Icons.local_fire_department_rounded,
+            '$_currentStreak',
+            'Streak',
+            const Color(0xFF2EB87D),
+          ),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(Icons.flash_on_rounded, '58', 'Workouts', AppTheme.primary)),
+        Expanded(
+          child: _buildStatCard(
+            Icons.flash_on_rounded,
+            '$_completedWorkouts',
+            'Workouts',
+            AppTheme.primary,
+          ),
+        ),
       ],
     );
   }

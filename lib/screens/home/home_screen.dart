@@ -1,7 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 import 'package:azana_sculpt/screens/home/wedgits.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -20,6 +20,7 @@ import '../meals/meals_screen.dart';
 import '../profile/profile_screen.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
+import '../../services/workout_progress_service.dart';
 import '../../models/user_model.dart';
 import '../../models/program_model.dart';
 import '../../models/workout_models.dart';
@@ -70,6 +71,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // Initialize user stream once
     final uid = AuthService().currentUser?.uid ?? '';
     _userStream = DatabaseService().userProfileStream(uid);
+  }
+
+  Future<void> _loadFitnessScore() async {
+    final progress = await WorkoutProgressService().loadProgress();
+    if (!mounted) return;
+    setState(() {
+      _fitnessScore = progress.fitnessScore;
+    });
+  }
+
+  Future<void> _refreshWorkoutProgress() async {
+    await _loadFitnessScore();
+    await _initStreakAndBadges();
+  }
+
+  void _openHomeTab() {
+    setState(() {
+      _currentIndex = 0;
+    });
+    unawaited(_refreshWorkoutProgress());
+  }
+
+  void _openProgressTab() {
+    setState(() {
+      _currentIndex = 3;
+    });
   }
 
   Future<void> _loadLocalImage() async {
@@ -160,6 +187,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ExerciseFetchScreen(
               driveUrl:
                   'https://drive.google.com/drive/folders/1aCGjE-q2mHanGuS0JecipGHZ3aqAljR0?usp=drive_link',
+              onProgressUpdated: _refreshWorkoutProgress,
+              onNavigateHome: _openHomeTab,
+              onNavigateProgress: _openProgressTab,
             ),
             const MealsScreen(),
             const ProgressScreen(),
@@ -1401,6 +1431,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     _currentIndex = index;
                     _loadLocalImage();
                   });
+                  if (index == 0) {
+                    unawaited(_refreshWorkoutProgress());
+                  }
                 },
                 type: BottomNavigationBarType.fixed,
                 backgroundColor: Colors.transparent,

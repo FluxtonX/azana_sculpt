@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -10,8 +11,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../constants/app_theme.dart';
+import '../../models/achievement_models.dart';
 import '../../models/workout_models.dart';
 import '../../services/google_drive_service.dart';
+import '../../services/milestone_service.dart';
+import '../../services/streak_service.dart';
+import '../../services/workout_progress_service.dart';
+import 'workout_complete_screen.dart';
 
 enum _RestPhase { nextSet, exerciseComplete }
 
@@ -51,6 +57,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   final _ExerciseVideoCache _globalCache = _ExerciseVideoCache();
 
   bool _isResting = false;
+  bool _isCompletingWorkout = false;
   int _remainingRestSeconds = 0;
   int _activeRestDuration = 0;
   Timer? _restTimer;
@@ -63,6 +70,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   // Track download status for the list
   final Map<String, int> _downloadProgress = {};
   final Set<String> _cachedExerciseIds = {};
+  WorkoutCompletionSummary? _completionSummary;
 
   late AnimationController _slideCtrl;
   late Animation<Offset> _slideAnim;
@@ -92,7 +100,8 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
 
   bool get _hasPreviousExercise => _currentIndex > 0;
   bool get _hasNextExercise => _currentIndex < _exercises.length - 1;
-  bool get _isBusy => _isResting || _isTransitioningExercise;
+  bool get _isBusy =>
+      _isResting || _isTransitioningExercise || _isCompletingWorkout;
 
   Future<void> _checkInitialCacheStatus() async {
     final prefs = await SharedPreferences.getInstance();
@@ -290,12 +299,12 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     _restPhase = null;
   }
 
-  void _completeSet() {
+  Future<void> _completeSet() async {
     if (_isBusy || _exercises.isEmpty) return;
 
     final exercise = _currentExercise;
     if (_isExerciseComplete(exercise)) {
-      _goToNextExerciseOrFinish();
+      await _goToNextExerciseOrFinish();
       return;
     }
 
@@ -308,14 +317,14 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
       return;
     }
 
-    _applyCompletedSet();
+    await _applyCompletedSet();
   }
 
   void _startRest(int seconds, {required _RestPhase phase}) {
     _restTimer?.cancel();
 
     if (seconds <= 0) {
-      _applyCompletedSet();
+      unawaited(_applyCompletedSet());
       return;
     }
 
@@ -331,25 +340,17 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
         setState(() => _remainingRestSeconds--);
       } else {
         timer.cancel();
-        _finishRest();
+        unawaited(_finishRest());
       }
     });
   }
 
-  void _finishRest() {
+  Future<void> _finishRest() async {
     _restTimer?.cancel();
-    _applyCompletedSet();
+    await _applyCompletedSet();
   }
 
-  Future<void> _incrementFitnessScore() async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentScore = prefs.getDouble('fitness_score') ?? 0.0;
-    // Increase score by 5 per completed exercise, capped at 100 for now
-    final newScore = (currentScore + 5).clamp(0.0, 100.0);
-    await prefs.setDouble('fitness_score', newScore);
-  }
-
-  void _applyCompletedSet() {
+  Future<void> _applyCompletedSet() async {
     if (_exercises.isEmpty) return;
 
     final exercise = _currentExercise;
@@ -357,11 +358,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
       0,
       exercise.sets,
     );
-
-    if (nextCompleted == exercise.sets && _completedSetCountFor(exercise) < exercise.sets) {
-      // First time completing all sets for this exercise
-      _incrementFitnessScore();
-    }
 
     setState(() {
       _completedSets[_currentIndex] = nextCompleted;
@@ -374,15 +370,15 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
 
   void _skipRest() {
     if (!_isResting) return;
-    _finishRest();
+    unawaited(_finishRest());
   }
 
-  void _goToNextExerciseOrFinish() {
+  Future<void> _goToNextExerciseOrFinish() async {
     if (_hasNextExercise) {
       _goToExercise(_currentIndex + 1);
       return;
     }
-    _showCompleteDialog();
+    await _showWorkoutCompleteScreen();
   }
 
   void _goToPreviousExercise() {
@@ -398,7 +394,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
       return;
     }
 
-    _showCompleteDialog();
+    unawaited(_showWorkoutCompleteScreen());
   }
 
   void _goToExercise(int newIndex) {
@@ -444,38 +440,103 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     });
   }
 
-  void _showCompleteDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: _surfaceAltColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          'Workout Complete!',
-          style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
-          'Great job! You finished all exercises in this category.',
-          style: TextStyle(color: _textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop(true);
-            },
-            child: const Text(
-              'DONE',
-              style: TextStyle(
-                color: AppTheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+  int _estimatedDurationMinutes() {
+    var totalSeconds = 0;
+    for (final exercise in _exercises) {
+      totalSeconds += exercise.sets * 45;
+      totalSeconds += (exercise.sets - 1) * exercise.restSeconds;
+    }
+    return (totalSeconds / 60).ceil().clamp(10, 120);
+  }
+
+  AchievementMilestone? _resolveUnlockedMilestone({
+    required int previousStreak,
+    required int updatedStreak,
+  }) {
+    final milestoneService = MilestoneService();
+    final previousMilestone = milestoneService.getMilestoneFromStreak(
+      previousStreak,
     );
+    final updatedMilestone = milestoneService.getMilestoneFromStreak(
+      updatedStreak,
+    );
+
+    if (updatedMilestone == null) return null;
+    if (previousMilestone == updatedMilestone &&
+        previousStreak >= updatedMilestone.requiredDays) {
+      return null;
+    }
+    return updatedMilestone;
+  }
+
+  Future<WorkoutCompletionSummary> _buildCompletionSummary() async {
+    if (_completionSummary != null) return _completionSummary!;
+
+    final previousStreak = await StreakService().loadStreak();
+    final progress = await WorkoutProgressService().recordWorkoutCompletion(
+      scoreIncrement: 10,
+    );
+
+    var updatedStreak = previousStreak;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      updatedStreak = await StreakService().updateStreak(uid);
+    }
+
+    final unlockedMilestone = _resolveUnlockedMilestone(
+      previousStreak: previousStreak.currentStreak,
+      updatedStreak: updatedStreak.currentStreak,
+    );
+
+    final summary = WorkoutCompletionSummary(
+      title: unlockedMilestone?.title ?? 'Workout Complete!',
+      subtitle: unlockedMilestone == null
+          ? 'You finished ${widget.folderName} and earned +10 score on your fitness journey.'
+          : 'Amazing work! You unlocked a new milestone and your progress is growing stronger.',
+      badgeAssetPath: unlockedMilestone?.assetPath,
+      durationMinutes: _estimatedDurationMinutes(),
+      exerciseCount: _exercises.length,
+      weeklyCompleted: progress.weeklyCompletedWorkouts,
+      weeklyGoal: WorkoutProgressService.weeklyGoal,
+      streakDays: updatedStreak.currentStreak == 0 ? 1 : updatedStreak.currentStreak,
+      scoreAdded: 10,
+      totalScore: progress.fitnessScore.round(),
+    );
+
+    _completionSummary = summary;
+    return summary;
+  }
+
+  Future<void> _showWorkoutCompleteScreen() async {
+    if (_isCompletingWorkout) return;
+
+    setState(() {
+      _isCompletingWorkout = true;
+    });
+
+    try {
+      final summary = await _buildCompletionSummary();
+      if (!mounted) return;
+
+      setState(() {
+        _isCompletingWorkout = false;
+      });
+
+      final action = await Navigator.of(context).push<WorkoutCompletionAction>(
+        MaterialPageRoute(
+          builder: (_) => WorkoutCompleteScreen(summary: summary),
+        ),
+      );
+
+      if (!mounted || action == null) return;
+      Navigator.of(context).pop(action);
+    } finally {
+      if (mounted && _isCompletingWorkout) {
+        setState(() {
+          _isCompletingWorkout = false;
+        });
+      }
+    }
   }
 
   @override
@@ -1003,7 +1064,11 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _isBusy ? null : _completeSet,
+        onPressed: _isBusy
+            ? null
+            : () async {
+                await _completeSet();
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: isDone ? _surfaceStrongColor : AppTheme.primary,
           foregroundColor: _textPrimary,
