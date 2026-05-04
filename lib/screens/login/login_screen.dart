@@ -50,9 +50,11 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (profile == null) {
-          Navigator.pushReplacementNamed(context, '/onboarding');
+          Navigator.pushReplacementNamed(context, '/subscription');
         } else if (profile.role == 'coach') {
           Navigator.pushReplacementNamed(context, '/coach');
+        } else if (!profile.isElite) {
+          Navigator.pushReplacementNamed(context, '/subscription');
         } else if (profile.height == null) {
           Navigator.pushReplacementNamed(context, '/onboarding');
         } else {
@@ -146,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 6),
                       // Subtitle
                       const Text(
-                        'Sign in to your KOR account',
+                        'Sign in to your  account',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
@@ -202,7 +204,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/forgot_password');
+                      },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: Size.zero,

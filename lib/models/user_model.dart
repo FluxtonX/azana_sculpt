@@ -39,6 +39,7 @@ class UserModel {
   final String? referral;
   final String? socialMedia;
   final String? role; // 'client', 'coach', 'admin'
+  final bool isElite;
 
   // Gamification
   final int? streakCount;
@@ -86,6 +87,7 @@ class UserModel {
     this.referral,
     this.socialMedia,
     this.role = 'client',
+    this.isElite = false,
     this.streakCount,
     this.longestStreak,
     this.lastActiveDate,
@@ -130,6 +132,7 @@ class UserModel {
       'referral': referral,
       'socialMedia': socialMedia,
       'role': role ?? 'client',
+      'isElite': isElite,
       'streakCount': streakCount,
       'longestStreak': longestStreak,
       'lastActiveDate': lastActiveDate,
@@ -175,6 +178,7 @@ class UserModel {
       referral: map['referral'],
       socialMedia: map['socialMedia'],
       role: map['role'] ?? 'client',
+      isElite: map['isElite'] ?? false,
       streakCount: map['streakCount'] as int?,
       longestStreak: map['longestStreak'] as int?,
       lastActiveDate: map['lastActiveDate'] as String?,
@@ -219,6 +223,7 @@ class UserModel {
     String? referral,
     String? socialMedia,
     String? role,
+    bool? isElite,
     int? streakCount,
     int? longestStreak,
     String? lastActiveDate,
@@ -260,6 +265,7 @@ class UserModel {
       referral: referral ?? this.referral,
       socialMedia: socialMedia ?? this.socialMedia,
       role: role ?? this.role,
+      isElite: isElite ?? this.isElite,
       streakCount: streakCount ?? this.streakCount,
       longestStreak: longestStreak ?? this.longestStreak,
       lastActiveDate: lastActiveDate ?? this.lastActiveDate,

@@ -1,83 +1,191 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:azana_sculpt/models/user_model.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
 import '../../widgets/premium_lock_overlay.dart';
 
-class PremiumProgramsScreen extends StatelessWidget {
+import '../../services/stripe_service.dart';
+
+import '../../services/database_service.dart';
+import '../../services/auth_service.dart';
+
+class PremiumProgramsScreen extends StatefulWidget {
   const PremiumProgramsScreen({super.key});
 
   @override
+  State<PremiumProgramsScreen> createState() => _PremiumProgramsScreenState();
+}
+
+class _PremiumProgramsScreenState extends State<PremiumProgramsScreen> {
+  bool _isLoading = false;
+
+  Future<void> _handlePayment() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Amount in cents (e.g., €49.00 = 4900)
+      final success = await StripeService.instance.makePayment(
+        amount: "4900",
+        currency: "EUR",
+      );
+
+      if (success) {
+        final userId = AuthService().currentUser?.uid;
+        if (userId != null) {
+          await DatabaseService().updateUserEliteStatus(userId, true);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Welcome to Elite! Payment Successful.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment cancelled or failed.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        title: const Text('Elite Access'),
-        titleTextStyle: const TextStyle(
-          fontFamily: 'Outfit',
-          fontSize: 24,
-          fontWeight: FontWeight.w900,
-          color: AppTheme.textDark,
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: AppTheme.surface,
+          appBar: AppBar(
+            title: const Text('Elite Access'),
+            titleTextStyle: const TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.textDark,
+            ),
+          ),
+          body: StreamBuilder<UserModel?>(
+            stream: DatabaseService().userProfileStream(
+              AuthService().currentUser?.uid ?? '',
+            ),
+            builder: (context, snapshot) {
+              final user = snapshot.data;
+              final isElite = user?.isElite ?? false;
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!isElite) ...[
+                      _buildUpgradeHeroCard(),
+                      const SizedBox(height: 28),
+                    ],
+                    const Text(
+                      'Premium Content',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      isElite
+                          ? 'Enjoy your full elite transformation access.'
+                          : 'Unlock your full transformation with elite programmes.',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textLight,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildLockedProgramCard(
+                      emoji: '🍽️',
+                      title: '21-Day Meal Plan',
+                      description:
+                          'Nutrition designed for body recomposition and sustained energy.',
+                      tag: 'NUTRITION',
+                      tagColor: const Color(0xFF2EB87D),
+                      isLocked: !isElite,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildLockedProgramCard(
+                      emoji: '⚡',
+                      title: 'Advanced Sculpt Series',
+                      description:
+                          'High-intensity circuits for women who are ready to level up.',
+                      tag: 'ADVANCED',
+                      tagColor: AppTheme.primary,
+                      isLocked: !isElite,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildLockedProgramCard(
+                      emoji: '🧘‍♀️',
+                      title: '30-Day Mind & Body Reset',
+                      description:
+                          'Mindfulness, mobility, and recovery for the whole you.',
+                      tag: 'WELLNESS',
+                      tagColor: const Color(0xFF9B89E8),
+                      isLocked: !isElite,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildLockedProgramCard(
+                      emoji: '💎',
+                      title: '1-on-1 Coaching Access',
+                      description:
+                          'Weekly check-ins, bespoke feedback, and direct coach messaging.',
+                      tag: 'COACHING',
+                      tagColor: AppTheme.accent,
+                      isLocked: !isElite,
+                    ),
+                    if (!isElite) ...[
+                      const SizedBox(height: 32),
+                      _buildValuePropositionCard(),
+                    ],
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildUpgradeHeroCard(),
-            const SizedBox(height: 28),
-            const Text(
-              'Premium Content',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textDark,
+        if (_isLoading)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black26,
+              child: const Center(
+                child: CircularProgressIndicator(color: AppTheme.primary),
               ),
             ),
-            const SizedBox(height: 6),
-            const Text(
-              'Unlock your full transformation with elite programmes.',
-              style: TextStyle(fontSize: 13, color: AppTheme.textLight),
-            ),
-            const SizedBox(height: 20),
-            _buildLockedProgramCard(
-              emoji: '🍽️',
-              title: '21-Day Meal Plan',
-              description: 'Nutrition designed for body recomposition and sustained energy.',
-              tag: 'NUTRITION',
-              tagColor: const Color(0xFF2EB87D),
-            ),
-            const SizedBox(height: 16),
-            _buildLockedProgramCard(
-              emoji: '⚡',
-              title: 'Advanced Sculpt Series',
-              description: 'High-intensity circuits for women who are ready to level up.',
-              tag: 'ADVANCED',
-              tagColor: AppTheme.primary,
-            ),
-            const SizedBox(height: 16),
-            _buildLockedProgramCard(
-              emoji: '🧘‍♀️',
-              title: '30-Day Mind & Body Reset',
-              description: 'Mindfulness, mobility, and recovery for the whole you.',
-              tag: 'WELLNESS',
-              tagColor: const Color(0xFF9B89E8),
-            ),
-            const SizedBox(height: 16),
-            _buildLockedProgramCard(
-              emoji: '💎',
-              title: '1-on-1 Coaching Access',
-              description: 'Weekly check-ins, bespoke feedback, and direct coach messaging.',
-              tag: 'COACHING',
-              tagColor: AppTheme.accent,
-            ),
-            const SizedBox(height: 32),
-            _buildValuePropositionCard(),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
 
@@ -123,33 +231,40 @@ class PremiumProgramsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Start Free Trial',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textDark,
+          GestureDetector(
+            onTap: _handlePayment,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.arrow_forward_rounded, size: 18, color: AppTheme.primary),
-              ],
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Upgrade Now — €49.00',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 18,
+                    color: AppTheme.primary,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -163,84 +278,92 @@ class PremiumProgramsScreen extends StatelessWidget {
     required String description,
     required String tag,
     required Color tagColor,
+    required bool isLocked,
   }) {
+    final cardContent = Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.textDark.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 36)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: tagColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        tag,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: tagColor,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            description,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppTheme.textMedium,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            height: 6,
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!isLocked) return cardContent;
+
     return PremiumLockOverlay(
       lockMessage: 'Upgrade to unlock',
-      onUpgradeTap: () {},
-      child: Container(
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.textDark.withOpacity(0.04),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(emoji, style: const TextStyle(fontSize: 36)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: tagColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          tag,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: tagColor,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.textDark,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              description,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppTheme.textMedium,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              height: 6,
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-          ],
-        ),
-      ),
+      onUpgradeTap: _handlePayment,
+      child: cardContent,
     );
   }
 
@@ -272,10 +395,16 @@ class PremiumProgramsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _buildValuePoint('🎯', 'Programmes tailored to your exact goals'),
-          _buildValuePoint('🥗', 'Expert meal plans built for body recomposition'),
+          _buildValuePoint(
+            '🥗',
+            'Expert meal plans built for body recomposition',
+          ),
           _buildValuePoint('📊', 'Advanced analytics and progress insights'),
           _buildValuePoint('💬', 'Direct access to your personal coach'),
-          _buildValuePoint('👑', 'Elite members see 3× better results on average'),
+          _buildValuePoint(
+            '👑',
+            'Elite members see 3× better results on average',
+          ),
         ],
       ),
     );

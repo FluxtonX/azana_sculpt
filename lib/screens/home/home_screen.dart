@@ -27,6 +27,7 @@ import '../../models/workout_models.dart';
 import '../../widgets/coach_card.dart';
 import '../coaches/all_coaches_screen.dart';
 import '../workouts/excercises_screen.dart';
+import '../../texting.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -241,10 +242,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       _buildHeader(userSnapshot.data),
                       const SizedBox(height: 24),
 
-                      FitnessScoreCard(
-                        score: 0,
-                        targetScore: _fitnessScore,
-                      ),
+                      FitnessScoreCard(score: 0, targetScore: _fitnessScore),
 
                       const SizedBox(height: 32),
                       const Text(
@@ -258,6 +256,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       const SizedBox(height: 16),
                       _buildTodayWorkoutCard(activeProgram),
+
+                      const SizedBox(height: 24),
+                      _buildGymWorkoutCard(),
 
                       const SizedBox(height: 32),
                       const Text(
@@ -575,6 +576,167 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildGymWorkoutCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  height: 160,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF1B1B1F), Color(0xFF2C2C2E)],
+                    ),
+                  ),
+                  child: Opacity(
+                    opacity: 0.6,
+                    child: Image.asset(
+                      'assets/home/todayWorkout.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFB9FF66),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'GYM LAB',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Gym Workout Library',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.textDark,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.fitness_center_rounded,
+                      size: 16,
+                      color: AppTheme.textMedium,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'All Muscle Groups',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textMedium,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Icon(
+                      Icons.video_library_rounded,
+                      size: 16,
+                      color: AppTheme.textMedium,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'Tutorials',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textMedium,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WorkoutTestingScreen(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD4847A),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      shadowColor: const Color(0xFFD4847A).withOpacity(0.4),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Explore Library',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1725,17 +1887,17 @@ class _WorkoutStartButtonState extends State<WorkoutStartButton> {
 
   void _start() async {
     setState(() => _state = 'loading');
-    
+
     // Simulate loading
     await Future.delayed(const Duration(milliseconds: 1800));
-    
+
     if (mounted) {
       setState(() => _state = 'success');
     }
-    
+
     // Show success for a moment
     await Future.delayed(const Duration(milliseconds: 800));
-    
+
     if (mounted) {
       widget.onComplete();
       // Reset after a delay so it's ready when user comes back
@@ -1758,11 +1920,17 @@ class _WorkoutStartButtonState extends State<WorkoutStartButton> {
               width: _state == 'idle' ? maxWidth : 56,
               height: 56,
               decoration: BoxDecoration(
-                color: _state == 'success' ? const Color(0xFF2EB87D) : const Color(0xFFD4847A),
+                color: _state == 'success'
+                    ? const Color(0xFF2EB87D)
+                    : const Color(0xFFD4847A),
                 borderRadius: BorderRadius.circular(_state == 'idle' ? 16 : 28),
                 boxShadow: [
                   BoxShadow(
-                    color: (_state == 'success' ? const Color(0xFF2EB87D) : const Color(0xFFD4847A)).withOpacity(0.4),
+                    color:
+                        (_state == 'success'
+                                ? const Color(0xFF2EB87D)
+                                : const Color(0xFFD4847A))
+                            .withOpacity(0.4),
                     blurRadius: 15,
                     offset: const Offset(0, 6),
                   ),
@@ -1791,7 +1959,7 @@ class _WorkoutStartButtonState extends State<WorkoutStartButton> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Start Workout',
+              'Home Workout',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
@@ -1800,7 +1968,11 @@ class _WorkoutStartButtonState extends State<WorkoutStartButton> {
               ),
             ),
             SizedBox(width: 8),
-            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: Colors.white,
+            ),
           ],
         ),
       );
@@ -1809,10 +1981,7 @@ class _WorkoutStartButtonState extends State<WorkoutStartButton> {
         key: ValueKey('loading'),
         width: 24,
         height: 24,
-        child: CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 3,
-        ),
+        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
       );
     } else {
       return const Icon(

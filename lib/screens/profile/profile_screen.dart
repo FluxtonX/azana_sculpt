@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:azana_sculpt/screens/messages/messages_screen.dart';
+import 'package:azana_sculpt/texting.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -511,8 +512,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             stream: (user?.role == 'coach')
                 ? DatabaseService().getUnreadMessagesCountStream(user!.uid)
                 : (user?.coachId != null)
-                    ? DatabaseService().getChatUnreadCountStream('${user!.uid}_${user!.coachId}', user!.uid)
-                    : Stream.value(0),
+                ? DatabaseService().getChatUnreadCountStream(
+                    '${user!.uid}_${user!.coachId}',
+                    user!.uid,
+                  )
+                : Stream.value(0),
             builder: (context, snapshot) {
               final unreadCount = snapshot.data ?? 0;
               return _buildMenuItem(
@@ -522,7 +526,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const MessagesScreen(isActive: true)),
+                    MaterialPageRoute(
+                      builder: (_) => const MessagesScreen(isActive: true),
+                    ),
                   );
                 },
               );
@@ -531,7 +537,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildMenuItem(
             Icons.track_changes_rounded,
             'Goals & Preferences',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => WorkoutTestingScreen()),
+              );
+            },
           ),
           _buildMenuItem(
             Icons.emoji_events_rounded,
@@ -598,10 +609,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Colors.redAccent,
                   shape: BoxShape.circle,
                 ),
-                constraints: const BoxConstraints(
-                  minWidth: 16,
-                  minHeight: 16,
-                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                 child: Center(
                   child: Text(
                     '$badgeCount',
@@ -635,12 +643,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (icon is IconData) {
       return Icon(icon, color: color, size: 22);
     } else if (icon is String) {
-      return Image.asset(
-        icon,
-        width: 22,
-        height: 22,
-        color: color,
-      );
+      return Image.asset(icon, width: 22, height: 22, color: color);
     }
     return const SizedBox(width: 22, height: 22);
   }

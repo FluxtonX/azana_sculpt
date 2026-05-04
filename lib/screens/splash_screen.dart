@@ -98,13 +98,24 @@ class _SplashScreenState extends State<SplashScreen>
 
         if (!mounted) return;
 
+        if (profile?.role == 'coach') {
+          Navigator.of(context).pushReplacementNamed('/coach');
+          return;
+        }
+
+        // 1. Check Subscription Status (Paywall)
+        final bool isElite = profile?.isElite ?? false;
+        if (!isElite) {
+          Navigator.of(context).pushReplacementNamed('/subscription');
+          return;
+        }
+
+        // 2. Check Onboarding Status
         final bool isOnboardingComplete =
             profile != null && profile.height != null && profile.age != null;
 
         if (!isOnboardingComplete) {
           Navigator.of(context).pushReplacementNamed('/onboarding');
-        } else if (profile?.role == 'coach') {
-          Navigator.of(context).pushReplacementNamed('/coach');
         } else {
           Navigator.of(context).pushReplacementNamed('/home');
         }

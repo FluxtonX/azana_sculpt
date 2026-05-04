@@ -10,6 +10,7 @@ import '../add_client_screen.dart';
 import '../create_program_screen.dart';
 import 'coach_messages_tab.dart';
 import 'coach_programs_tab.dart';
+import '../payment_requests_screen.dart';
 
 class CoachDashboardTab extends StatefulWidget {
   const CoachDashboardTab({super.key});
@@ -144,12 +145,23 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
                         ),
-                        child: CircleAvatar(
-                          radius: 26,
-                          backgroundColor: Colors.white24,
-                          backgroundImage: _localImageFile != null 
-                              ? FileImage(_localImageFile!) as ImageProvider
-                              : NetworkImage(avatarUrl),
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: Colors.white24,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              displayName[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -379,6 +391,24 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
                     },
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _actionCardIcon(
+                    Icons.verified_user_outlined,
+                    'Verify Payments',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PaymentRequestsScreen()),
+                      );
+                    },
+                  ),
+                ),
+                const Spacer(), // Empty space for layout balance
               ],
             ),
           ],

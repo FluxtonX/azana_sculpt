@@ -42,6 +42,17 @@ class AuthService {
     }
   }
 
+  // Reset Password
+  Future<void> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      throw e.message ?? 'An unknown error occurred';
+    } catch (e) {
+      throw e.toString();
+    }
+  }
+
   // Auth State Stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 

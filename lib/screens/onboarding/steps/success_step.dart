@@ -6,68 +6,72 @@ class SuccessStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // 1. Success Icon
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            shape: BoxShape.circle,
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.check_rounded,
-              color: Colors.white,
-              size: 60,
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 40),
+          // 1. Success Icon
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 60,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 40),
-        
-        // 2. Title
-        const Text(
-          "Assessment Complete!",
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // 3. Subtitle
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Text(
-            "Azana is generating your personalized fitness profile...",
-            textAlign: TextAlign.center,
+          const SizedBox(height: 40),
+          
+          // 2. Title
+          const Text(
+            "Assessment Complete!",
             style: TextStyle(
               fontFamily: 'Outfit',
-              fontSize: 16,
-              color: Colors.white.withOpacity(0.8),
-              fontWeight: FontWeight.w500,
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
             ),
           ),
-        ),
-        const SizedBox(height: 48),
-        
-        // 4. Checklist
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 48),
-          child: Column(
-            children: [
-              _buildCheckItem("All analysis processed"),
-              _buildCheckItem("Goal framework created"),
-              _buildCheckItem("Workout plan generated"),
-              _buildCheckItem("All plans are ready"),
-            ],
+          const SizedBox(height: 16),
+          
+          // 3. Subtitle
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              "Azana is generating your personalized fitness profile...",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 16,
+                color: Colors.white.withOpacity(0.8),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 48),
+          
+          // 4. Checklist
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: Column(
+              children: [
+                _buildCheckItem("All analysis processed"),
+                _buildCheckItem("Goal framework created"),
+                _buildCheckItem("Workout plan generated"),
+                _buildCheckItem("All plans are ready"),
+              ],
+            ),
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
     );
   }
 

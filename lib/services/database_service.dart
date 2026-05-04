@@ -510,4 +510,78 @@ class DatabaseService {
       return programs.isNotEmpty ? programs.first : null;
     });
   }
+  // Update User Elite Status
+  Future<void> updateUserEliteStatus(String uid, bool isElite) async {
+    try {
+      await _db.collection('users').doc(uid).update({
+        'isElite': isElite,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Error updating elite status: $e');
+      rethrow;
+    }
+  }
+
+  // Submit Manual Payment Request
+  Future<void> submitPaymentRequest({
+    required String uid,
+    required String email,
+    required String coachEmail,
+    required String transactionId,
+  }) async {
+    try {
+      await _db.collection('payment_requests').doc(uid).set({
+        'uid': uid,
+        'email': email,
+        'coachEmail': coachEmail,
+        'transactionId': transactionId,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Error submitting payment request: $e');
+      rethrow;
+    }
+  }
+
+  // Get Stream of pending payment requests for a specific coach
+  Stream<List<Map<String, dynamic>>> getPendingPaymentRequestsStream(String coachEmail) {
+    return _db
+        .collection('payment_requests')
+        .where('status', isEqualTo: 'pending')
+        .where('coachEmail', isEqualTo: coachEmail)
+        .snapshots()
+        .map((snapshot) {
+          final docs = snapshot.docs.map((doc) => doc.data()).toList();
+          // Sort in memory to avoid needing a Firestore index
+          docs.sort((a, b) {
+            final aTime = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final bTime = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+            return bTime.compareTo(aTime);
+          });
+          return docs;
+        });
+  }
+
+  // Approve or Reject Payment Request
+  Future<void> updatePaymentRequestStatus({
+    required String uid,
+    required String status, // 'approved' or 'rejected'
+  }) async {
+    try {
+      await _db.collection('payment_requests').doc(uid).update({
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (status == 'approved') {
+        // Unlock user access
+        await updateUserEliteStatus(uid, true);
+      }
+    } catch (e) {
+      debugPrint('Error updating payment request: $e');
+      rethrow;
+    }
+  }
 }

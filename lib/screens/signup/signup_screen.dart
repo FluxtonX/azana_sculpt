@@ -23,7 +23,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   bool _isLoading = false;
   bool _termsAccepted = false;
-  final String _selectedRole = 'client'; // Default to client
+  String _selectedRole = 'client'; // Default to client
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
 
   @override
   void dispose() {
@@ -89,7 +91,7 @@ class _SignupScreenState extends State<SignupScreen> {
           if (_selectedRole == 'coach') {
             Navigator.pushReplacementNamed(context, '/coach');
           } else {
-            Navigator.pushReplacementNamed(context, '/onboarding');
+            Navigator.pushReplacementNamed(context, '/subscription');
           }
         }
       }
@@ -172,7 +174,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 6),
                   // Subtitle
                   const Text(
-                    'Join KOR and start your fitness journey',
+                    'Join  and start your fitness journey',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -181,6 +183,89 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                   const SizedBox(height: 30),
+
+                  // ── Role Selection Toggle ────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F7),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFEAEAEA)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedRole = 'client'),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _selectedRole == 'client'
+                                    ? AppTheme.primary
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: _selectedRole == 'client'
+                                    ? [
+                                        BoxShadow(
+                                          color: AppTheme.primary.withOpacity(0.3),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        )
+                                      ]
+                                    : [],
+                              ),
+                              child: Text(
+                                'Client',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: _selectedRole == 'client'
+                                      ? Colors.white
+                                      : AppTheme.textMedium,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedRole = 'coach'),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _selectedRole == 'coach'
+                                    ? AppTheme.primary
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: _selectedRole == 'coach'
+                                    ? [
+                                        BoxShadow(
+                                          color: AppTheme.primary.withOpacity(0.3),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        )
+                                      ]
+                                    : [],
+                              ),
+                              child: Text(
+                                'Coach',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: _selectedRole == 'coach'
+                                      ? Colors.white
+                                      : AppTheme.textMedium,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
                   // ── Full Name Field ──────────────────────────────────────
                   _buildInputField(
@@ -213,7 +298,18 @@ class _SignupScreenState extends State<SignupScreen> {
                     controller: _passwordController,
                     hint: 'Create password',
                     prefixIcon: Icons.lock_outline_rounded,
-                    obscure: true,
+                    obscure: !_passwordVisible,
+                    suffixIcon: IconButton(
+                      onPressed: () =>
+                          setState(() => _passwordVisible = !_passwordVisible),
+                      icon: Icon(
+                        _passwordVisible
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: AppTheme.textLight,
+                        size: 20,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
 
@@ -222,7 +318,20 @@ class _SignupScreenState extends State<SignupScreen> {
                     controller: _confirmPasswordController,
                     hint: 'Confirm password',
                     prefixIcon: Icons.lock_outline_rounded,
-                    obscure: true,
+                    obscure: !_confirmPasswordVisible,
+                    suffixIcon: IconButton(
+                      onPressed: () => setState(
+                        () =>
+                            _confirmPasswordVisible = !_confirmPasswordVisible,
+                      ),
+                      icon: Icon(
+                        _confirmPasswordVisible
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: AppTheme.textLight,
+                        size: 20,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 18),
 
@@ -267,7 +376,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: "I agree to KOR's ",
+                                    text: "I agree  ",
                                     style: TextStyle(
                                       color: AppTheme.primary.withOpacity(0.7),
                                       fontSize: 12,
@@ -358,6 +467,7 @@ class _SignupScreenState extends State<SignupScreen> {
     required IconData prefixIcon,
     TextInputType keyboardType = TextInputType.text,
     bool obscure = false,
+    Widget? suffixIcon,
   }) {
     return Container(
       height: 56,
@@ -390,6 +500,11 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Icon(prefixIcon, color: AppTheme.textLight, size: 20),
           ),
           prefixIconConstraints: const BoxConstraints(
+            minWidth: 50,
+            minHeight: 56,
+          ),
+          suffixIcon: suffixIcon,
+          suffixIconConstraints: const BoxConstraints(
             minWidth: 50,
             minHeight: 56,
           ),
