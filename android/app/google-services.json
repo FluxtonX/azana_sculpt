@@ -12,7 +12,20 @@
           "package_name": "com.example.azana_sculpt"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1049036823270-hlg6d9inlimca9rvdvncco14p1tq7p2r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.azana_sculpt",
+            "certificate_hash": "e43d59821ed66d4baa295423b06797ee6ef4cb32"
+          }
+        },
+        {
+          "client_id": "1049036823270-fupgf769k3qoobe7g2smoq3q0nkf1al5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDQFBLUJceluhw86LKGahSdriZ9X6H9xs0"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1049036823270-fupgf769k3qoobe7g2smoq3q0nkf1al5.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1049036823270-83k7lqungsohvlublriruhmuul5bfhc2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.azanaSculpt"
+              }
+            }
+          ]
         }
       }
     }

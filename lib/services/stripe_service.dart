@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
-import 'package:http/http.dart' as http;
+import 'package:cloud_functions/cloud_functions.dart';
 
 class StripeService {
   StripeService._();
@@ -10,10 +9,7 @@ class StripeService {
   static const String _publishableKey =
       "pk_test_51TE5heFzACYiAnySrMuXXr7mSWFpGibLIZlVkTPkGBGo0DQRLfVxDnbZYEvXpUrLP0vFfxt03wpctIDMcRQX3PKr00GbVvfFf7";
 
-  // WARNING: Only use Secret Key in the app for QUICK TESTING.
-  // For production, this MUST move to a backend server.
-  static const String _secretKey =
-      "YOUR_STRIPE_SECRET_KEY";
+
 
   Future<void> init() async {
     Stripe.publishableKey = _publishableKey;
@@ -44,35 +40,22 @@ class StripeService {
     }
   }
 
-  // Implementation for Direct Testing
+  // Implementation using Firebase Cloud Functions
   Future<Map<String, dynamic>?> _createPaymentIntent(
     String amount,
     String currency,
   ) async {
     try {
-      Map<String, dynamic> body = {
+      final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('createStripePaymentIntent');
+      final results = await callable.call(<String, dynamic>{
         'amount': amount,
         'currency': currency,
-        'payment_method_types[]': 'card',
-      };
+      });
 
-      var response = await http.post(
-        Uri.parse('https://api.stripe.com/v1/payment_intents'),
-        headers: {
-          'Authorization': 'Bearer $_secretKey',
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: body,
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        debugPrint('Stripe API Error: ${response.body}');
-        throw Exception(
-          'Failed to create PaymentIntent: ${response.statusCode}',
-        );
-      }
+      return Map<String, dynamic>.from(results.data as Map);
+    } on FirebaseFunctionsException catch (error) {
+      debugPrint('Firebase Functions Error: ${error.code} - ${error.message}');
+      throw Exception('Failed to create PaymentIntent: ${error.message}');
     } catch (err) {
       debugPrint('Error charging user: ${err.toString()}');
       rethrow; // Rethrow to handle it in the UI

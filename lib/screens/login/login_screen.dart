@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
+import '../../models/user_model.dart';
+
 import '../../widgets/animated_auth_button.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -72,6 +74,50 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
+
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final userCredential = await _authService.signInWithGoogle();
+
+      if (mounted && userCredential?.user != null) {
+        final user = userCredential!.user!;
+        var profile = await DatabaseService().getUserProfile(user.uid);
+
+        if (profile == null) {
+          // New user signing up via Google
+          final newUser = UserModel(
+            uid: user.uid,
+            email: user.email ?? '',
+            fullName: user.displayName ?? '',
+            role: 'client', // Default to client
+            createdAt: DateTime.now(),
+          );
+          await DatabaseService().saveUserProfile(newUser);
+          Navigator.pushReplacementNamed(context, '/subscription');
+        } else if (profile.role == 'coach') {
+          Navigator.pushReplacementNamed(context, '/coach');
+        } else if (!profile.isElite) {
+          Navigator.pushReplacementNamed(context, '/subscription');
+        } else if (profile.height == null) {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -270,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: _buildSocialButton(
                           label: 'Google',
                           iconPath: 'assets/icons/Google.png',
-                          onTap: () {},
+                          onTap: _handleGoogleLogin,
                         ),
                       ),
                       const SizedBox(width: 12),
