@@ -1,10 +1,13 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_theme.dart';
+import '../../models/workout_models.dart';
 import 'exercise_detail_screen.dart';
-import '../../services/google_drive_service.dart';
+import '../../services/database_service.dart';
+import '../../services/auth_service.dart';
 import 'workout_complete_screen.dart';
+import '../../services/google_drive_service.dart';
+import 'workout_testing_screen.dart';
 
 class ExerciseFetchScreen extends StatefulWidget {
   final String driveUrl;
@@ -24,20 +27,8 @@ class ExerciseFetchScreen extends StatefulWidget {
   State<ExerciseFetchScreen> createState() => _ExerciseFetchScreenState();
 }
 
-class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerProviderStateMixin {
-  bool _isLoading = true;
-  String? _error;
-  List<String> _exerciseNames = [];
-  List<String> _filteredExercises = [];
-  Map<String, String> _folderIds = {};
-  List<String> _unlockedFolders = [];
-  final GoogleDriveService _driveService = GoogleDriveService();
-  
-  // Search state
-  bool _isSearching = false;
-  final TextEditingController _searchController = TextEditingController();
-  
-  // Animation Controllers
+class _ExerciseFetchScreenState extends State<ExerciseFetchScreen>
+    with TickerProviderStateMixin {
   late AnimationController _listAnimationController;
 
   @override
@@ -47,580 +38,579 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _initScreen();
   }
 
   @override
   void dispose() {
-    _driveService.dispose();
-    _searchController.dispose();
     _listAnimationController.dispose();
     super.dispose();
   }
 
-  Future<void> _initScreen() async {
-    final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getStringList('imported_exercises');
-
-    if (stored != null && stored.isNotEmpty) {
-      final unlocked = prefs.getStringList('unlocked_folders') ?? [];
-      final folderIdsJson = prefs.getString('folder_ids');
-      final Map<String, String> folderIds = {};
-      if (folderIdsJson != null) {
-        try {
-          final map = jsonDecode(folderIdsJson) as Map<String, dynamic>;
-          map.forEach((key, value) => folderIds[key] = value.toString());
-        } catch (e) {
-          debugPrint('Failed to decode folder_ids: $e');
-        }
-      }
-
-      setState(() {
-        _exerciseNames = stored;
-        _filteredExercises = stored;
-        _folderIds = folderIds;
-        _unlockedFolders = unlocked.isEmpty && stored.isNotEmpty
-            ? [stored.first]
-            : unlocked;
-        _isLoading = false;
-      });
-      _listAnimationController.forward();
-    } else {
-      _fetchExercises();
-    }
-  }
-
-  void _onSearchChanged(String query) {
-    setState(() {
-      _filteredExercises = _exerciseNames
-          .where((name) => name.toLowerCase().contains(query.toLowerCase()))
-          .toList();
-    });
-    // Restart animation for filtered results
-    _listAnimationController.reset();
-    _listAnimationController.forward();
-  }
-
-  void _toggleSearch() {
-    setState(() {
-      _isSearching = !_isSearching;
-      if (!_isSearching) {
-        _searchController.clear();
-        _filteredExercises = _exerciseNames;
-        _listAnimationController.reset();
-        _listAnimationController.forward();
-      }
-    });
-  }
-
-  Future<void> _fetchExercises() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final mainFolderId = widget.driveUrl
-          .split('/folders/')
-          .last
-          .split('?')
-          .first;
-
-      final subfolders = await _driveService.fetchSubfolders(mainFolderId);
-
-      final Map<String, String> folderIdMap = {};
-      final List<String> names = [];
-
-      for (var folder in subfolders) {
-        final name = folder['name']!;
-        final id = folder['id']!;
-        names.add(name);
-        folderIdMap[name] = id;
-      }
-
-      names.sort();
-
-      setState(() {
-        _exerciseNames = names;
-        _filteredExercises = names;
-        _folderIds = folderIdMap;
-        if (_unlockedFolders.isEmpty && names.isNotEmpty) {
-          _unlockedFolders = [names.first];
-        }
-        _isLoading = false;
-      });
-      _listAnimationController.forward();
-
-      if (names.isNotEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setStringList('imported_exercises', names);
-        await prefs.setString('folder_ids', jsonEncode(folderIdMap));
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to fetch categories: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  bool _isLocked(String folderName) {
-    if (_unlockedFolders.isEmpty && _exerciseNames.isNotEmpty) {
-      _unlockedFolders.add(_exerciseNames.first);
-      _saveUnlockedProgress();
-    }
-    return !_unlockedFolders.contains(folderName);
-  }
-
-  Future<void> _saveUnlockedProgress() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('unlocked_folders', _unlockedFolders);
-  }
-
-  void _unlockNext(String currentFolder) {
-    final currentIndex = _exerciseNames.indexOf(currentFolder);
-    if (currentIndex != -1 && currentIndex < _exerciseNames.length - 1) {
-      final nextFolder = _exerciseNames[currentIndex + 1];
-      if (!_unlockedFolders.contains(nextFolder)) {
-        setState(() {
-          _unlockedFolders.add(nextFolder);
-        });
-        _saveUnlockedProgress();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('🎉 New Category Unlocked: ${nextFolder.toUpperCase()}!'),
-            backgroundColor: AppTheme.primary,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final userId = AuthService().currentUser?.uid ?? '';
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF7F5),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        titleSpacing: 16,
-        title: LayoutBuilder(
-          builder: (context, constraints) {
-            return SizedBox(
-              height: 44,
-              child: Stack(
-                alignment: Alignment.centerRight,
-                children: [
-                  // Title
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeOutCubic,
-                    left: _isSearching ? -60 : 0,
-                    top: 0,
-                    bottom: 0,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 300),
-                        opacity: _isSearching ? 0.0 : 1.0,
-                        child: const Text(
-                          'Exercises',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.textDark,
-                            letterSpacing: -0.5,
+      backgroundColor: AppTheme.surface,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: DatabaseService().getClientAssignmentsStream(userId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primary),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return _buildErrorView(snapshot.error.toString());
+                }
+
+                final assignments = snapshot.data ?? [];
+
+                if (assignments.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                _listAnimationController.forward();
+
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  itemCount: assignments.length,
+                  itemBuilder: (context, index) {
+                    final assignment = assignments[index];
+                    return AnimatedBuilder(
+                      animation: _listAnimationController,
+                      builder: (context, child) {
+                        final delay = index * 0.1;
+                        final start = delay.clamp(0.0, 1.0);
+                        final end = (delay + 0.5).clamp(0.0, 1.0);
+
+                        final opacity = CurvedAnimation(
+                          parent: _listAnimationController,
+                          curve: Interval(start, end, curve: Curves.easeOut),
+                        ).value;
+
+                        final slide = CurvedAnimation(
+                          parent: _listAnimationController,
+                          curve: Interval(
+                            start,
+                            end,
+                            curve: Curves.easeOutBack,
                           ),
-                        ),
-                      ),
-                    ),
-                  ),
+                        ).value;
 
-                  // Refresh Button
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeOutCubic,
-                    right: _isSearching ? -60 : 54,
-                    top: 0,
-                    bottom: 0,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      opacity: _isSearching ? 0.0 : 1.0,
-                      child: IconButton(
-                        icon: const Icon(Icons.refresh_rounded, color: AppTheme.textDark, size: 22),
-                        onPressed: _isSearching ? null : _fetchExercises,
-                      ),
-                    ),
-                  ),
-
-                  // Search Field Expanding Background
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeOutCubic,
-                    right: 54,
-                    left: _isSearching ? 0 : constraints.maxWidth - 54,
-                    top: 0,
-                    bottom: 0,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 300),
-                      opacity: _isSearching ? 1.0 : 0.0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppTheme.primary.withOpacity(0.15)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            physics: const NeverScrollableScrollPhysics(),
-                            child: SizedBox(
-                              width: constraints.maxWidth - 54,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Center(
-                                  child: TextField(
-                                    controller: _searchController,
-                                    autofocus: false, // Don't autofocus to avoid keyboard popping aggressively
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.textDark,
-                                    ),
-                                    decoration: const InputDecoration(
-                                      hintText: 'Find your workout...',
-                                      border: InputBorder.none,
-                                      isDense: true,
-                                      hintStyle: TextStyle(color: AppTheme.textLight, fontSize: 14),
-                                    ),
-                                    onChanged: _onSearchChanged,
-                                  ),
-                                ),
-                              ),
-                            ),
+                        return Opacity(
+                          opacity: opacity,
+                          child: Transform.translate(
+                            offset: Offset(0, 50 * (1 - slide)),
+                            child: child,
                           ),
-                        ),
+                        );
+                      },
+                      child: _AssignmentVideoCard(
+                        assignment: assignment,
+                        onProgressUpdated: widget.onProgressUpdated,
+                        onNavigateHome: widget.onNavigateHome,
+                        onNavigateProgress: widget.onNavigateProgress,
                       ),
-                    ),
-                  ),
-
-                  // Search Icon / Close Icon
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    child: GestureDetector(
-                      onTap: _toggleSearch,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: _isSearching ? AppTheme.primary : const Color(0xFFF7EBE8),
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: _isSearching ? [
-                            BoxShadow(
-                              color: AppTheme.primary.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            )
-                          ] : [],
-                        ),
-                        child: Icon(
-                          _isSearching ? Icons.close : Icons.search,
-                          color: _isSearching ? Colors.white : AppTheme.textDark,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-        actions: const [
-          SizedBox(width: 16),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-          : _error != null
-          ? _buildErrorView()
-          : _buildExerciseList(),
     );
   }
 
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFD4847A).withOpacity(0.15),
+            const Color(0xFFCDA96E).withOpacity(0.15),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD4847A).withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.fitness_center_rounded,
+              color: Color(0xFFD4847A),
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'My Workouts',
+                style: GoogleFonts.outfit(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              Text(
+                'Crush your daily targets',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  color: AppTheme.textMedium,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.fitness_center_rounded,
+                size: 80,
+                color: AppTheme.primary,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'No assigned workout',
+              style: GoogleFonts.outfit(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Your coach hasn\'t assigned any workouts for today yet. Keep an eye out!',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                color: AppTheme.textMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-  Widget _buildErrorView() {
+  Widget _buildErrorView(String error) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 64, color: AppTheme.error),
-            const SizedBox(height: 16),
-            Text(_error!, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _fetchExercises,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Try Again'),
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 64,
+              color: AppTheme.error,
             ),
+            const SizedBox(height: 16),
+            Text(error, textAlign: TextAlign.center),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildExerciseList() {
-    if (_filteredExercises.isEmpty && _isSearching) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 500),
-              builder: (context, value, child) => Opacity(
-                opacity: value,
-                child: Transform.scale(scale: value, child: child),
-              ),
-              child: Icon(Icons.search_off_rounded, size: 80, color: AppTheme.textLight.withOpacity(0.3)),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No workouts found',
-              style: TextStyle(color: AppTheme.textLight, fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      );
-    }
+class _AssignmentVideoCard extends StatefulWidget {
+  final Map<String, dynamic> assignment;
+  final VoidCallback? onProgressUpdated;
+  final VoidCallback? onNavigateHome;
+  final VoidCallback? onNavigateProgress;
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      itemCount: _filteredExercises.length,
-      itemBuilder: (context, index) {
-        final name = _filteredExercises[index];
-        return AnimatedBuilder(
-          animation: _listAnimationController,
-          builder: (context, child) {
-            final delay = index * 0.1;
-            final start = delay.clamp(0.0, 1.0);
-            final end = (delay + 0.5).clamp(0.0, 1.0);
-            
-            final opacity = CurvedAnimation(
-              parent: _listAnimationController,
-              curve: Interval(start, end, curve: Curves.easeOut),
-            ).value;
-            
-            final slide = CurvedAnimation(
-              parent: _listAnimationController,
-              curve: Interval(start, end, curve: Curves.easeOutBack),
-            ).value;
+  const _AssignmentVideoCard({
+    required this.assignment,
+    this.onProgressUpdated,
+    this.onNavigateHome,
+    this.onNavigateProgress,
+  });
 
-            return Opacity(
-              opacity: opacity,
-              child: Transform.translate(
-                offset: Offset(0, 50 * (1 - slide)),
-                child: child,
-              ),
-            );
-          },
-          child: _buildExerciseCard(name),
-        );
-      },
-    );
+  @override
+  State<_AssignmentVideoCard> createState() => _AssignmentVideoCardState();
+}
+
+class _AssignmentVideoCardState extends State<_AssignmentVideoCard> {
+  double _scale = 1.0;
+  String? _thumbnailUrl;
+  bool _isLoading = true;
+
+  final GoogleDriveService _driveService = GoogleDriveService();
+
+  // Static cache to prevent re-fetching thumbnails for the same driveUrl
+  static final Map<String, String?> _thumbnailCache = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _initThumbnail();
   }
 
-  Widget _buildExerciseCard(String title) {
-    final categoryImages = {
-      'arms': 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
-      'back': 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=2070',
-      'biceps': 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070',
-      'cardio': 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1974',
-      'chest': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070',
-      'glutes': 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=2070',
-      'legs': 'https://images.unsplash.com/photo-1434608519344-49d77a699e1d?q=80&w=2070',
-      'shoulder': 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
-      'triceps': 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1974',
-    };
+  void _initThumbnail() async {
+    final driveUrl = widget.assignment['driveUrl'] as String?;
+    if (driveUrl == null || driveUrl.isEmpty) return;
+    if (widget.assignment['sourceType'] == 'youtube') {
+      setState(() {
+        _thumbnailUrl = _youtubeThumbnail(driveUrl);
+        _isLoading = false;
+      });
+      return;
+    }
 
-    final imageUrl = categoryImages[title.toLowerCase()] ??
-        categoryImages.values.elementAt(title.length % categoryImages.length);
+    // 1. Check Cache first
+    if (_thumbnailCache.containsKey(driveUrl)) {
+      if (mounted) {
+        setState(() {
+          _thumbnailUrl = _thumbnailCache[driveUrl];
+        });
+      }
+      return;
+    }
+
+    String? thumbToUse;
+
+    // 2. Fetch Thumbnail Metadata
+    if (driveUrl.contains('/folders/')) {
+      final folderId = driveUrl.split('/folders/').last.split('?').first;
+      try {
+        final exercises = await _driveService.fetchFolderVideos(folderId);
+        if (exercises.isNotEmpty) {
+          thumbToUse = exercises.first.thumbnailUrl;
+        }
+      } catch (e) {
+        debugPrint('Error fetching thumbnail folder: $e');
+      }
+    } else {
+      // Direct file or API link
+      String? fileId;
+      if (driveUrl.contains('/file/d/')) {
+        fileId = driveUrl.split('/file/d/').last.split('/').first;
+      } else if (driveUrl.contains('id=')) {
+        fileId = driveUrl.split('id=').last.split('&').first;
+      } else if (driveUrl.contains('drive/v3/files/')) {
+        fileId = driveUrl.split('drive/v3/files/').last.split('?').first;
+      }
+
+      if (fileId != null) {
+        try {
+          final meta = await _driveService.fetchFileMetadata(fileId);
+          thumbToUse = meta['thumbnailUrl'];
+        } catch (e) {
+          debugPrint('Error fetching file thumbnail for $fileId: $e');
+        }
+      }
+    }
+
+    // 3. Save to Cache and Update State
+    _thumbnailCache[driveUrl] = thumbToUse;
+
+    if (mounted) {
+      setState(() {
+        _thumbnailUrl = thumbToUse;
+        _isLoading = false;
+      });
+    }
+  }
+
+  String? _youtubeThumbnail(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return null;
+
+    String? id;
+    if (uri.host.contains('youtu.be')) {
+      id = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+    } else {
+      id = uri.queryParameters['v'];
+    }
+
+    if (id == null || id.isEmpty) return null;
+    return 'https://img.youtube.com/vi/$id/hqdefault.jpg';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final assignment = widget.assignment;
+    final title = assignment['workoutTitle'] ?? 'Workout';
+    final notes = assignment['notes'] ?? 'Assigned by your coach';
+    final driveUrl = assignment['driveUrl'] ?? '';
+    final sourceType = assignment['sourceType'] ?? 'google_drive';
+
+    String? folderId;
+    if (sourceType == 'google_drive' && driveUrl.contains('/folders/')) {
+      folderId = driveUrl.split('/folders/').last.split('?').first;
+    }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 24),
+      height: 280,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.2),
             blurRadius: 20,
-            offset: const Offset(0, 8),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            child: SizedBox(
-              height: 140,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(imageUrl, fit: BoxFit.cover),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.black.withOpacity(0.3), Colors.transparent],
-                        stops: const [0.0, 0.4],
+          // Background Thumbnail
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              color: const Color(0xFF1B1B1F),
+              image: _thumbnailUrl != null
+                  ? DecorationImage(
+                      image: NetworkImage(_thumbnailUrl!),
+                      fit: BoxFit.cover,
+                      colorFilter: ColorFilter.mode(
+                        Colors.black.withOpacity(0.4),
+                        BlendMode.darken,
                       ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    right: 16,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(20),
+                    )
+                  : null,
+            ),
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white24),
+                  )
+                : (_thumbnailUrl == null
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.play_circle_outline,
+                                color: Colors.white.withOpacity(0.2),
+                                size: 48,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Video Ready",
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.3),
+                                ),
+                              ),
+                            ],
                           ),
-                          child: const Text(
-                            'PREMIUM',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF9E5C62),
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.bookmark_border_rounded, size: 18, color: Color(0xFF1F2937)),
-                        ),
-                      ],
-                    ),
-                  ),
+                        )
+                      : null),
+          ),
+
+          // Overlay Gradient
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.2),
+                  Colors.black.withOpacity(0.8),
                 ],
               ),
             ),
           ),
+
+          // Content
           Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: assignment['status'] == 'completed'
+                        ? const Color(0xFF2EB87D)
+                        : AppTheme.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (assignment['status'] == 'completed')
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                      if (assignment['status'] == 'completed')
+                        const SizedBox(width: 6),
+                      Text(
+                        assignment['status'] == 'completed'
+                            ? 'COMPLETED'
+                            : 'TARGET: ${assignment['scheduledDate'] != null ? (assignment['scheduledDate'] as String).split('T').first : 'TODAY'}',
+                        style: GoogleFonts.outfit(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 22,
+                  style: GoogleFonts.outfit(
+                    fontSize: 28,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF111827),
+                    color: Colors.white,
                     height: 1.1,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Imported from Google Drive • Exercise Set',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF6B7280).withOpacity(0.8),
+                  notes,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.7),
+                    height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    _buildStat(Icons.timer_outlined, '15 min'),
-                    const SizedBox(width: 20),
-                    _buildStat(Icons.local_fire_department_outlined, '120 kcal'),
-                    const SizedBox(width: 20),
-                    _buildStat(Icons.bar_chart_rounded, 'Intermediate'),
-                  ],
-                ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLocked(title)
-                        ? null
-                        : () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ExerciseDetailScreen(
-                                  folderName: title,
-                                  folderId: _folderIds[title],
-                                ),
-                              ),
-                            );
 
-                            if (result is WorkoutCompletionAction) {
-                              _unlockNext(title);
-                              widget.onProgressUpdated?.call();
-                              if (result == WorkoutCompletionAction.backHome) {
-                                widget.onNavigateHome?.call();
-                              } else if (result ==
-                                  WorkoutCompletionAction.viewProgress) {
-                                widget.onNavigateProgress?.call();
-                              }
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isLocked(title) ? Colors.grey[300] : AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _isLocked(title) ? 'LOCKED' : 'START EXERCISE',
-                          style: const TextStyle(
-                            fontSize: 14, 
-                            fontWeight: FontWeight.w900, 
-                            letterSpacing: 1.2,
+                // Animated Start Button
+                GestureDetector(
+                  onTapDown: (_) => setState(() => _scale = 0.95),
+                  onTapUp: (_) => setState(() => _scale = 1.0),
+                  onTapCancel: () => setState(() => _scale = 1.0),
+                  onTap: () async {
+                    final Widget screen;
+                    if (sourceType == 'youtube') {
+                      final workout = Map<String, dynamic>.from(
+                        assignment['youtubeWorkout'] as Map? ??
+                            <String, dynamic>{
+                              '`': title,
+                              'Training Video': driveUrl,
+                              'NOTES': notes,
+                            },
+                      );
+                      screen = ActiveWorkoutScreen(
+                        workout: workout,
+                        assignmentId: assignment['id']?.toString(),
+                      );
+                    } else {
+                      screen = ExerciseDetailScreen(
+                        folderName: title,
+                        folderId: folderId,
+                        directVideoUrl: folderId == null ? driveUrl : null,
+                        assignmentId: assignment['id']?.toString(),
+                        directExercise: assignment['driveWorkout'] is Map
+                            ? ExerciseModel.fromMap(
+                                Map<String, dynamic>.from(
+                                  assignment['driveWorkout'] as Map,
+                                ),
+                              )
+                            : null,
+                      );
+                    }
+
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => screen),
+                    );
+
+                    if (result is WorkoutCompletionAction) {
+                      widget.onProgressUpdated?.call();
+                      if (result == WorkoutCompletionAction.backHome) {
+                        widget.onNavigateHome?.call();
+                      } else if (result ==
+                          WorkoutCompletionAction.viewProgress) {
+                        widget.onNavigateProgress?.call();
+                      }
+                    }
+                  },
+                  child: AnimatedScale(
+                    scale: _scale,
+                    duration: const Duration(milliseconds: 100),
+                    child: Container(
+                      width: double.infinity,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: assignment['status'] == 'completed'
+                            ? const Color(0xFF2EB87D).withOpacity(0.9)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.2),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(_isLocked(title) ? Icons.lock_outline_rounded : Icons.play_circle_fill_rounded, size: 20),
-                      ],
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            assignment['status'] == 'completed'
+                                ? 'REWATCH WORKOUT'
+                                : 'START WORKOUT',
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              color: assignment['status'] == 'completed'
+                                  ? Colors.white
+                                  : Colors.black,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            assignment['status'] == 'completed'
+                                ? Icons.replay_rounded
+                                : Icons.play_circle_fill_rounded,
+                            color: assignment['status'] == 'completed'
+                                ? Colors.white
+                                : AppTheme.primary,
+                            size: 24,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -629,19 +619,6 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStat(IconData icon, String label) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: const Color(0xFF6B7280)),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
-        ),
-      ],
     );
   }
 }

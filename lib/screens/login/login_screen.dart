@@ -47,6 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted && userCredential?.user != null) {
         final profile = await DatabaseService().getUserProfile(
           userCredential!.user!.uid,
+          fresh: true,
         );
 
         if (profile == null) {
@@ -262,28 +263,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Social Buttons ───────────────────────────────────────
-                  Row(
-                    children: [
-                      // Google
-                      Expanded(
-                        child: _buildSocialButton(
-                          label: 'Google',
-                          iconPath: 'assets/icons/Google.png',
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Apple
-                      Expanded(
-                        child: _buildSocialButton(
-                          label: 'Apple',
-                          iconPath: 'assets/icons/apple.png',
-                          onTap: () {},
-                        ),
-                      ),
-                    ],
-                  ),
+                  // // ── Social Buttons ───────────────────────────────────────
+                  // Row(
+                  //   children: [
+                  //     // Google
+                  //     Expanded(
+                  //       child: _buildSocialButton(
+                  //         label: 'Google',
+                  //         iconPath: 'assets/icons/Google.png',
+                  //         onTap: () {},
+                  //       ),
+                  //     ),
+                  //     const SizedBox(width: 12),
+                  //     // Apple
+                  //     Expanded(
+                  //       child: _buildSocialButton(
+                  //         label: 'Apple',
+                  //         iconPath: 'assets/icons/apple.png',
+                  //         onTap: () {},
+                  //       ),
+                  //     ),
+                  //   ],
+                  // ),
                   const SizedBox(height: 30),
 
                   // ── Sign Up Link ─────────────────────────────────────────

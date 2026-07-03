@@ -5,24 +5,24 @@ class UserModel {
   final String? phone;
   final String? ageRange;
   final int? age;
-  
+
   // Physical
   final String? height;
   final String? weight;
   final String? heightUnit;
   final String? weightUnit;
-  
+
   // Medical
   final bool? isTakingMedication;
   final List<String>? medicalConditions;
-  
+
   // Fitness
   final String? activityLevel;
   final bool? hasGymAccess;
   final double? weightliftingExperience;
   final List<String>? equipment;
   final String? sleepQuality;
-  
+
   // Personal
   final String? gender;
   final String? fitnessGoal;
@@ -32,7 +32,7 @@ class UserModel {
   final double? motivationLevel;
   final String? mentalBarriers;
   final String? coachingPreference;
-  
+
   // Readiness
   final String? investmentReadiness;
   final String? commitmentReadiness;
@@ -40,6 +40,7 @@ class UserModel {
   final String? socialMedia;
   final String? role; // 'client', 'coach', 'admin'
   final bool isElite;
+  final bool isOnboardingComplete;
 
   // Gamification
   final int? streakCount;
@@ -52,6 +53,16 @@ class UserModel {
   final String? bio;
   final List<String>? specialties;
   final String? profileImageUrl;
+
+  // Computed Fitness Metrics
+  final double? bmi;
+  final double? bmr;
+  final double? dailyCalories;
+  final double? targetCalories;
+  final double? proteinGoal;
+  final double? waterGoal;
+  final double? progressPercent;
+  final double? fitnessScore;
 
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -88,6 +99,7 @@ class UserModel {
     this.socialMedia,
     this.role = 'client',
     this.isElite = false,
+    this.isOnboardingComplete = false,
     this.streakCount,
     this.longestStreak,
     this.lastActiveDate,
@@ -96,6 +108,14 @@ class UserModel {
     this.bio,
     this.specialties,
     this.profileImageUrl,
+    this.bmi,
+    this.bmr,
+    this.dailyCalories,
+    this.targetCalories,
+    this.proteinGoal,
+    this.waterGoal,
+    this.progressPercent,
+    this.fitnessScore,
     this.createdAt,
     this.updatedAt,
   });
@@ -133,6 +153,7 @@ class UserModel {
       'socialMedia': socialMedia,
       'role': role ?? 'client',
       'isElite': isElite,
+      'isOnboardingComplete': isOnboardingComplete,
       'streakCount': streakCount,
       'longestStreak': longestStreak,
       'lastActiveDate': lastActiveDate,
@@ -141,8 +162,17 @@ class UserModel {
       'bio': bio,
       'specialties': specialties,
       'profileImageUrl': profileImageUrl,
+      'bmi': bmi,
+      'bmr': bmr,
+      'dailyCalories': dailyCalories,
+      'targetCalories': targetCalories,
+      'proteinGoal': proteinGoal,
+      'waterGoal': waterGoal,
+      'progressPercent': progressPercent,
+      'fitnessScore': fitnessScore,
       'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      'updatedAt':
+          updatedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
     };
   }
 
@@ -162,12 +192,15 @@ class UserModel {
       medicalConditions: List<String>.from(map['medicalConditions'] ?? []),
       activityLevel: map['activityLevel'],
       hasGymAccess: map['hasGymAccess'],
-      weightliftingExperience: (map['weightliftingExperience'] as num?)?.toDouble(),
+      weightliftingExperience: (map['weightliftingExperience'] as num?)
+          ?.toDouble(),
       equipment: List<String>.from(map['equipment'] ?? []),
       sleepQuality: map['sleepQuality'],
       gender: map['gender'],
       fitnessGoal: map['fitnessGoal'],
-      supplements: map['supplements'] != null ? List<String>.from(map['supplements']) : null,
+      supplements: map['supplements'] != null
+          ? List<String>.from(map['supplements'])
+          : null,
       bodyVision: map['bodyVision'],
       commitmentLevel: (map['commitmentLevel'] as num?)?.toDouble(),
       motivationLevel: (map['motivationLevel'] as num?)?.toDouble(),
@@ -179,6 +212,7 @@ class UserModel {
       socialMedia: map['socialMedia'],
       role: map['role'] ?? 'client',
       isElite: map['isElite'] ?? false,
+      isOnboardingComplete: map['isOnboardingComplete'] ?? false,
       streakCount: map['streakCount'] as int?,
       longestStreak: map['longestStreak'] as int?,
       lastActiveDate: map['lastActiveDate'] as String?,
@@ -187,10 +221,24 @@ class UserModel {
           : null,
       coachId: map['coachId'],
       bio: map['bio'],
-      specialties: map['specialties'] != null ? List<String>.from(map['specialties']) : null,
+      specialties: map['specialties'] != null
+          ? List<String>.from(map['specialties'])
+          : null,
       profileImageUrl: map['profileImageUrl'],
-      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+      bmi: (map['bmi'] as num?)?.toDouble(),
+      bmr: (map['bmr'] as num?)?.toDouble(),
+      dailyCalories: (map['dailyCalories'] as num?)?.toDouble(),
+      targetCalories: (map['targetCalories'] as num?)?.toDouble(),
+      proteinGoal: (map['proteinGoal'] as num?)?.toDouble(),
+      waterGoal: (map['waterGoal'] as num?)?.toDouble(),
+      progressPercent: (map['progressPercent'] as num?)?.toDouble(),
+      fitnessScore: (map['fitnessScore'] as num?)?.toDouble(),
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : null,
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'])
+          : null,
     );
   }
 
@@ -224,6 +272,7 @@ class UserModel {
     String? socialMedia,
     String? role,
     bool? isElite,
+    bool? isOnboardingComplete,
     int? streakCount,
     int? longestStreak,
     String? lastActiveDate,
@@ -232,6 +281,14 @@ class UserModel {
     String? bio,
     List<String>? specialties,
     String? profileImageUrl,
+    double? bmi,
+    double? bmr,
+    double? dailyCalories,
+    double? targetCalories,
+    double? proteinGoal,
+    double? waterGoal,
+    double? progressPercent,
+    double? fitnessScore,
     DateTime? updatedAt,
   }) {
     return UserModel(
@@ -249,7 +306,8 @@ class UserModel {
       medicalConditions: medicalConditions ?? this.medicalConditions,
       activityLevel: activityLevel ?? this.activityLevel,
       hasGymAccess: hasGymAccess ?? this.hasGymAccess,
-      weightliftingExperience: weightliftingExperience ?? this.weightliftingExperience,
+      weightliftingExperience:
+          weightliftingExperience ?? this.weightliftingExperience,
       equipment: equipment ?? this.equipment,
       sleepQuality: sleepQuality ?? this.sleepQuality,
       gender: gender ?? this.gender,
@@ -266,6 +324,7 @@ class UserModel {
       socialMedia: socialMedia ?? this.socialMedia,
       role: role ?? this.role,
       isElite: isElite ?? this.isElite,
+      isOnboardingComplete: isOnboardingComplete ?? this.isOnboardingComplete,
       streakCount: streakCount ?? this.streakCount,
       longestStreak: longestStreak ?? this.longestStreak,
       lastActiveDate: lastActiveDate ?? this.lastActiveDate,
@@ -274,6 +333,14 @@ class UserModel {
       bio: bio ?? this.bio,
       specialties: specialties ?? this.specialties,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      bmi: bmi ?? this.bmi,
+      bmr: bmr ?? this.bmr,
+      dailyCalories: dailyCalories ?? this.dailyCalories,
+      targetCalories: targetCalories ?? this.targetCalories,
+      proteinGoal: proteinGoal ?? this.proteinGoal,
+      waterGoal: waterGoal ?? this.waterGoal,
+      progressPercent: progressPercent ?? this.progressPercent,
+      fitnessScore: fitnessScore ?? this.fitnessScore,
       createdAt: this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

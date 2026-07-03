@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import '../../constants/app_theme.dart';
 import '../../models/workout_models.dart';
@@ -15,10 +16,12 @@ class EditWorkoutExercisesScreen extends StatefulWidget {
   });
 
   @override
-  State<EditWorkoutExercisesScreen> createState() => _EditWorkoutExercisesScreenState();
+  State<EditWorkoutExercisesScreen> createState() =>
+      _EditWorkoutExercisesScreenState();
 }
 
-class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen> {
+class _EditWorkoutExercisesScreenState
+    extends State<EditWorkoutExercisesScreen> {
   late List<ExerciseModel> _exercises;
   final _dbService = DatabaseService();
   bool _isSaving = false;
@@ -36,16 +39,32 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Unsaved Changes'),
-        content: const Text('You have unsaved changes. Do you want to discard them?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'Unsaved Changes',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'You have unsaved changes. Do you want to discard them?',
+          style: GoogleFonts.outfit(),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Stay'),
+            child: Text(
+              'Stay',
+              style: GoogleFonts.outfit(color: AppTheme.textMedium),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Discard',
+              style: GoogleFonts.outfit(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -64,14 +83,20 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
       if (mounted) {
         setState(() => _hasUnsavedChanges = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All changes saved successfully!')),
+          const SnackBar(
+            content: Text('All changes saved successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } finally {
@@ -79,18 +104,23 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
     }
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {int maxLines = 1, TextInputType? keyboardType, String? hint}) {
+  Widget _buildModernField(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? hint,
+    IconData? icon,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
             color: AppTheme.textDark,
-            letterSpacing: 1.0,
           ),
         ),
         const SizedBox(height: 8),
@@ -98,13 +128,23 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
           controller: controller,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          style: const TextStyle(fontSize: 15, color: AppTheme.textDark),
+          style: GoogleFonts.outfit(fontSize: 15),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppTheme.textLight, fontSize: 13),
+            prefixIcon: icon != null
+                ? Icon(icon, color: AppTheme.primary, size: 18)
+                : null,
+            hintStyle: GoogleFonts.outfit(
+              color: AppTheme.textLight,
+              fontSize: 13,
+            ),
             filled: true,
-            fillColor: AppTheme.surfaceCard,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            fillColor: const Color(0xFFF8F8F8),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.all(16),
           ),
         ),
       ],
@@ -121,9 +161,9 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
@@ -137,75 +177,98 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'New Exercise',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.textDark,
-                    ),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 24),
-              _buildTextField('Exercise Name', nameController, hint: 'e.g. Bulgarian Split Squat'),
+              Text(
+                'New Exercise',
+                style: GoogleFonts.outfit(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildModernField(
+                'Exercise Name',
+                nameController,
+                hint: 'e.g. Bulgarian Split Squat',
+                icon: Icons.sports_gymnastics_rounded,
+              ),
               const SizedBox(height: 20),
-              _buildTextField('Instructions', instructionController, maxLines: 3, hint: 'e.g. Keep your chest up and core engaged...'),
+              _buildModernField(
+                'Instructions',
+                instructionController,
+                maxLines: 3,
+                hint: 'e.g. Keep your chest up...',
+                icon: Icons.notes_rounded,
+              ),
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _buildTextField('Sets', setsController, keyboardType: TextInputType.number)),
+                  Expanded(
+                    child: _buildModernField(
+                      'Sets',
+                      setsController,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildTextField('Reps/Time', repsController)),
+                  Expanded(child: _buildModernField('Reps', repsController)),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildTextField('Rest (s)', restController, keyboardType: TextInputType.number)),
+                  Expanded(
+                    child: _buildModernField(
+                      'Rest (s)',
+                      restController,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 32),
-              GestureDetector(
-                onTap: () {
+              ElevatedButton(
+                onPressed: () {
                   if (nameController.text.isNotEmpty) {
                     setState(() {
-                      _exercises.add(ExerciseModel(
-                        id: const Uuid().v4(),
-                        name: nameController.text.trim(),
-                        instruction: instructionController.text.trim(),
-                        sets: int.tryParse(setsController.text) ?? 3,
-                        reps: repsController.text.trim(),
-                        restSeconds: int.tryParse(restController.text) ?? 60,
-                      ));
+                      _exercises.add(
+                        ExerciseModel(
+                          id: const Uuid().v4(),
+                          name: nameController.text.trim(),
+                          instruction: instructionController.text.trim(),
+                          sets: int.tryParse(setsController.text) ?? 3,
+                          reps: repsController.text.trim(),
+                          restSeconds: int.tryParse(restController.text) ?? 60,
+                        ),
+                      );
                       _hasUnsavedChanges = true;
                     });
                     Navigator.pop(context);
                   }
                 },
-                child: Container(
-                  width: double.infinity,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(16),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  minimumSize: const Size(double.infinity, 60),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'ADD TO SESSION',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
+                ),
+                child: Text(
+                  'ADD TO SESSION',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -225,34 +288,16 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: const Color(0xFFFAFAFA),
         appBar: AppBar(
-          title: Column(
-            children: [
-              const Text(
-                'STEP 3: EXERCISES',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.primary,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              Text(
-                widget.workout.title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.textDark,
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: AppTheme.surface,
-          centerTitle: true,
+          backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppTheme.textDark,
+              size: 20,
+            ),
             onPressed: () async {
               final shouldPop = await _onWillPop();
               if (shouldPop && mounted) {
@@ -260,64 +305,40 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
               }
             },
           ),
-          actions: [
-            if (!_hasUnsavedChanges)
-              IconButton(
-                icon: const Icon(Icons.check_circle_outline_rounded, color: AppTheme.primary),
-                onPressed: () => Navigator.pop(context),
+          title: Column(
+            children: [
+              Text(
+                'Exercise Builder',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
               ),
-          ],
+              Text(
+                widget.workout.title,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          centerTitle: true,
         ),
         body: Column(
           children: [
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildProgressHeader(),
+            ),
+            const SizedBox(height: 24),
             Expanded(
               child: _exercises.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(32),
-                              decoration: BoxDecoration(
-                                color: AppTheme.accent.withOpacity(0.05),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.format_list_bulleted_rounded,
-                                  size: 64, color: AppTheme.accent.withOpacity(0.5)),
-                            ),
-                            const SizedBox(height: 24),
-                            const Text(
-                              'No exercises yet',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: AppTheme.textDark,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Define the routine for this workout session.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: AppTheme.textLight, fontSize: 14),
-                            ),
-                            const SizedBox(height: 32),
-                            ElevatedButton.icon(
-                              onPressed: _addExercise,
-                              icon: const Icon(Icons.add_rounded),
-                              label: const Text('Add First Exercise'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.accent,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
+                  ? _buildEmptyState()
                   : ReorderableListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
                       itemCount: _exercises.length,
                       onReorder: (oldIndex, newIndex) {
                         setState(() {
@@ -329,76 +350,7 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                       },
                       itemBuilder: (context, index) {
                         final exercise = _exercises[index];
-                        return Container(
-                          key: ValueKey(exercise.id),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                            border: Border.all(color: AppTheme.divider.withOpacity(0.3)),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Theme(
-                              data: Theme.of(context).copyWith(
-                                canvasColor: Colors.transparent,
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(20),
-                                leading: Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    gradient: AppTheme.primaryGradient,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${index + 1}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                title: Text(
-                                  exercise.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 16,
-                                    color: AppTheme.textDark,
-                                  ),
-                                ),
-                                subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 6),
-                                  child: Text(
-                                    '${exercise.sets} sets • ${exercise.reps} reps • ${exercise.restSeconds}s rest',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.textMedium,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                trailing: const Icon(Icons.drag_indicator_rounded, color: AppTheme.textLight),
-                                onLongPress: () {
-                                  setState(() {
-                                    _exercises.removeAt(index);
-                                    _hasUnsavedChanges = true;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                        );
+                        return _buildExerciseCard(exercise, index);
                       },
                     ),
             ),
@@ -407,30 +359,273 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, -4))],
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(32),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
                 ),
-                child: SizedBox(
-                  width: double.infinity,
+                child: SafeArea(
                   child: ElevatedButton(
                     onPressed: _isSaving ? null : _saveChanges,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      minimumSize: const Size(double.infinity, 60),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
-                    child: _isSaving 
-                      ? const CircularProgressIndicator(color: Colors.white) 
-                      : const Text('SAVE ALL CHANGES', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: _isSaving
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            'SAVE CHANGES',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
               ),
           ],
         ),
-        floatingActionButton: _hasUnsavedChanges ? null : FloatingActionButton(
-          onPressed: _addExercise,
-          backgroundColor: AppTheme.primary,
-          child: const Icon(Icons.add, color: Colors.white),
+        floatingActionButton: _hasUnsavedChanges
+            ? null
+            : FloatingActionButton(
+                onPressed: _addExercise,
+                backgroundColor: AppTheme.primary,
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildProgressHeader() {
+    return Row(
+      children: [
+        _buildStepIndicator('1', 'Basic Info', true, true),
+        Expanded(
+          child: Container(
+            height: 2,
+            color: AppTheme.primary,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+        ),
+        _buildStepIndicator('2', 'Workouts', true, true),
+        Expanded(
+          child: Container(
+            height: 2,
+            color: AppTheme.primary,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+        ),
+        _buildStepIndicator('3', 'Exercises', true, false),
+      ],
+    );
+  }
+
+  Widget _buildStepIndicator(
+    String step,
+    String label,
+    bool isActive,
+    bool isDone,
+  ) {
+    return Column(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: isActive
+                ? (isDone ? AppTheme.primary : Colors.white)
+                : Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isActive ? AppTheme.primary : Colors.grey[300]!,
+            ),
+          ),
+          child: Center(
+            child: isDone
+                ? const Icon(Icons.check, color: Colors.white, size: 16)
+                : Text(
+                    step,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isActive ? AppTheme.primary : Colors.grey[400],
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: isActive ? AppTheme.primary : Colors.grey[400],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExerciseCard(ExerciseModel exercise, int index) {
+    return Container(
+      key: ValueKey(exercise.id),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        border: Border.all(color: AppTheme.primary.withOpacity(0.05)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(20),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '${index + 1}',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w900,
+                color: AppTheme.primary,
+              ),
+            ),
+          ),
+        ),
+        title: Text(
+          exercise.name,
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+            color: AppTheme.textDark,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              _buildInfoBadge('${exercise.sets} Sets'),
+              const SizedBox(width: 8),
+              _buildInfoBadge('${exercise.reps} Reps'),
+              const SizedBox(width: 8),
+              _buildInfoBadge('${exercise.restSeconds}s Rest'),
+            ],
+          ),
+        ),
+        trailing: const Icon(
+          Icons.drag_indicator_rounded,
+          color: AppTheme.textLight,
+        ),
+        onLongPress: () {
+          setState(() {
+            _exercises.removeAt(index);
+            _hasUnsavedChanges = true;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildInfoBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.outfit(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.textMedium,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.format_list_bulleted_rounded,
+                size: 64,
+                color: AppTheme.primary.withOpacity(0.5),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No exercises yet',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Define the routine for this session.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                color: AppTheme.textLight,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: _addExercise,
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text(
+                'Add First Exercise',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

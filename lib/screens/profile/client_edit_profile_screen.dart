@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../constants/app_theme.dart';
 import '../../../models/user_model.dart';
 import '../../../services/database_service.dart';
+import '../../../services/fitness_calculation_service.dart';
 
 class ClientEditProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -85,6 +86,9 @@ class _ClientEditProfileScreenState extends State<ClientEditProfileScreen> {
       );
 
       await DatabaseService().saveUserProfile(updatedUser);
+
+      // Recalculate and persist fitness metrics
+      await FitnessCalculationService().calculateAndSave(updatedUser);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

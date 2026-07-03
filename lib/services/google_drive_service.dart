@@ -92,6 +92,62 @@ class GoogleDriveService {
         .join(' ');
   }
 
+  /// Converts a standard Google Drive URL to a direct API media streaming URL
+  static String getDirectVideoUrl(String originalUrl) {
+    if (originalUrl.isEmpty) return '';
+    
+    // If it's already an API media link, just return it (but ensure key is there)
+    if (originalUrl.contains('googleapis.com/drive/v3/files/')) {
+      if (!originalUrl.contains('key=')) {
+        final separator = originalUrl.contains('?') ? '&' : '?';
+        return '$originalUrl${separator}key=${ApiKeys.googleDriveApi}';
+      }
+      return originalUrl;
+    }
+
+    String? fileId;
+    
+    // Extract ID from different formats
+    if (originalUrl.contains('/file/d/')) {
+      fileId = originalUrl.split('/file/d/').last.split('/').first;
+    } else if (originalUrl.contains('id=')) {
+      fileId = originalUrl.split('id=').last.split('&').first;
+    } else if (originalUrl.contains('uc?export=download')) {
+      // already a direct link format, but let's standardize to API
+      fileId = originalUrl.split('id=').last.split('&').first;
+    }
+
+    if (fileId != null && fileId.isNotEmpty) {
+      return 'https://www.googleapis.com/drive/v3/files/$fileId?alt=media&key=${ApiKeys.googleDriveApi}';
+    }
+
+    return originalUrl; // Fallback
+  }
+
+  /// Fetches metadata (like thumbnailLink) for a single file ID
+  Future<Map<String, String?>> fetchFileMetadata(String fileId) async {
+    final uri = Uri.https(_baseUrl, '/drive/v3/files/$fileId', {
+      'key': ApiKeys.googleDriveApi,
+      'fields': 'thumbnailLink,webContentLink',
+    });
+
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch file metadata: ${response.body}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final thumb = (data['thumbnailLink'] as String? ?? '').replaceAll(
+      '=s220',
+      '=s600', // Request higher resolution for cards
+    );
+
+    return {
+      'thumbnailUrl': thumb.isNotEmpty ? thumb : null,
+      'videoUrl': 'https://www.googleapis.com/drive/v3/files/$fileId?alt=media&key=${ApiKeys.googleDriveApi}',
+    };
+  }
+
   void dispose() {
     _client.close();
   }

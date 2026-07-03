@@ -13,7 +13,6 @@ import 'screens/coach/coach_main_screen.dart';
 import 'screens/login/welcome_screen.dart';
 import 'screens/login/forgot_password_screen.dart';
 import 'screens/subscription/subscription_screen.dart';
-
 import 'services/stripe_service.dart';
 
 class MyHttpOverrides extends HttpOverrides {
@@ -28,6 +27,52 @@ class MyHttpOverrides extends HttpOverrides {
 void main() async {
   HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Set up global error builder to catch and print build errors
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    debugPrint('==================================================');
+    debugPrint('FLUTTER ERROR DETECTED:');
+    debugPrint('Exception: ${details.exception}');
+    debugPrint('Stack Trace:\n${details.stack}');
+    debugPrint('==================================================');
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: Colors.red,
+                  size: 48,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'An unexpected error occurred',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  details.exception.toString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Initialize Stripe
@@ -67,6 +112,7 @@ class AzanaSculptApp extends StatelessWidget {
       // builder: DevicePreview.appBuilder,
       title: 'Azana Sculpt',
       debugShowCheckedModeBanner: false,
+
       theme: AppTheme.lightTheme,
       home: const SplashScreen(),
       routes: {

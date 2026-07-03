@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../constants/app_theme.dart';
 import '../widgets/step_header.dart';
 
 class SourceStep extends StatelessWidget {
   final TextEditingController sourceController;
 
-  const SourceStep({
-    super.key,
-    required this.sourceController,
-  });
+  const SourceStep({super.key, required this.sourceController});
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +23,7 @@ class SourceStep extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: const Color(0xFFE5E9EF),
-                  width: 1.5,
-                ),
+                border: Border.all(color: const Color(0xFFE5E9EF), width: 1.5),
               ),
               child: TextField(
                 controller: sourceController,

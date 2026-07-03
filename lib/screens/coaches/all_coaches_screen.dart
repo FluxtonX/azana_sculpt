@@ -3,6 +3,7 @@ import '../../constants/app_theme.dart';
 import '../../services/database_service.dart';
 import '../../models/user_model.dart';
 import '../../widgets/coach_card.dart';
+import 'coach_detail_screen.dart';
 
 class AllCoachesScreen extends StatelessWidget {
   const AllCoachesScreen({super.key});
@@ -62,7 +63,12 @@ class AllCoachesScreen extends StatelessWidget {
                 coach: coaches[index],
                 isHorizontal: false,
                 onTap: () {
-                  // Navigate to coach profile detail if needed
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CoachDetailScreen(coach: coaches[index]),
+                    ),
+                  );
                 },
               );
             },

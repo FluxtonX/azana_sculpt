@@ -65,7 +65,7 @@ class EquipmentStep extends StatelessWidget {
               itemBuilder: (context, index) {
                 final option = equipmentOptions[index];
                 final label = option['label'] as String;
-                final image = option['image'] as String?;
+                final image = option['image'];
                 final icon = option['icon'] as IconData?;
                 final isSelected = selectedEquipment.contains(label);
 

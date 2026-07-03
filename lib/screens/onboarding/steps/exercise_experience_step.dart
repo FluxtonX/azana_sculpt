@@ -44,7 +44,7 @@ class ExerciseExperienceStep extends StatelessWidget {
               itemBuilder: (context, index) {
                 final level = levels[index];
                 final label = level['label'] as String;
-                final image = level['image'] as String?;
+                final image = level['image'];
                 final icon = level['icon'] as IconData?;
                 final isSelected = selectedExperience == label;
 

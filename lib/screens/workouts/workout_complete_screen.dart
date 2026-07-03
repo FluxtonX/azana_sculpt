@@ -33,10 +33,7 @@ class WorkoutCompletionSummary {
 class WorkoutCompleteScreen extends StatelessWidget {
   final WorkoutCompletionSummary summary;
 
-  const WorkoutCompleteScreen({
-    super.key,
-    required this.summary,
-  });
+  const WorkoutCompleteScreen({super.key, required this.summary});
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +185,9 @@ class WorkoutCompleteScreen extends StatelessWidget {
                 child: _buildStatItem(
                   icon: Icons.stars_rounded,
                   label: 'Score',
-                  value: '+${summary.scoreAdded}',
+                  value: summary.scoreAdded > 0
+                      ? '+${summary.scoreAdded}'
+                      : 'Updated',
                 ),
               ),
             ],
@@ -298,10 +297,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFooterPill({
-    required String label,
-    required String value,
-  }) {
+  Widget _buildFooterPill({required String label, required String value}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
@@ -351,10 +347,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-          ),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -379,10 +372,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
     );

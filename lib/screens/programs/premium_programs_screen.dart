@@ -27,12 +27,12 @@ class _PremiumProgramsScreenState extends State<PremiumProgramsScreen> {
 
     try {
       // Amount in cents (e.g., €49.00 = 4900)
-      final success = await StripeService.instance.makePayment(
+      final error = await StripeService.instance.makePayment(
         amount: "4900",
         currency: "EUR",
       );
 
-      if (success) {
+      if (error == null) {
         final userId = AuthService().currentUser?.uid;
         if (userId != null) {
           await DatabaseService().updateUserEliteStatus(userId, true);
@@ -46,12 +46,21 @@ class _PremiumProgramsScreenState extends State<PremiumProgramsScreen> {
             ),
           );
         }
-      } else {
+      } else if (error == 'cancelled') {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Payment cancelled or failed.'),
+              content: Text('Payment cancelled.'),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
               backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 4),
             ),
           );
         }

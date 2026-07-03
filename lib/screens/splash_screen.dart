@@ -83,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _startNavigationTimer() {
-    Timer(const Duration(seconds: 4), () async {
+    Timer(const Duration(seconds: 3), () async {
       if (!mounted) return;
 
       try {
@@ -94,34 +94,33 @@ class _SplashScreenState extends State<SplashScreen>
           return;
         }
 
-        final profile = await DatabaseService().getUserProfile(user.uid);
+        final profile = await DatabaseService().getUserProfile(user.uid, fresh: true);
 
         if (!mounted) return;
 
-        if (profile?.role == 'coach') {
-          Navigator.of(context).pushReplacementNamed('/coach');
-          return;
-        }
-
-        // 1. Check Subscription Status (Paywall)
-        final bool isElite = profile?.isElite ?? false;
-        if (!isElite) {
+        if (profile == null) {
           Navigator.of(context).pushReplacementNamed('/subscription');
           return;
         }
 
-        // 2. Check Onboarding Status
-        final bool isOnboardingComplete =
-            profile != null && profile.height != null && profile.age != null;
+        if (profile.role == 'coach') {
+          Navigator.of(context).pushReplacementNamed('/coach');
+          return;
+        }
 
-        if (!isOnboardingComplete) {
+        if (!profile.isElite) {
+          Navigator.of(context).pushReplacementNamed('/subscription');
+          return;
+        }
+
+        if (!profile.isOnboardingComplete) {
           Navigator.of(context).pushReplacementNamed('/onboarding');
         } else {
           Navigator.of(context).pushReplacementNamed('/home');
         }
       } catch (e) {
         debugPrint("Splash Navigation Error: $e");
-        if (mounted) Navigator.of(context).pushReplacementNamed('/onboarding');
+        if (mounted) Navigator.of(context).pushReplacementNamed('/subscription');
       }
     });
   }

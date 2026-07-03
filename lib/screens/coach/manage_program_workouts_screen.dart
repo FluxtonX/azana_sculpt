@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import '../../constants/app_theme.dart';
 import '../../models/program_model.dart';
@@ -12,23 +13,27 @@ class ManageProgramWorkoutsScreen extends StatefulWidget {
   const ManageProgramWorkoutsScreen({super.key, required this.program});
 
   @override
-  State<ManageProgramWorkoutsScreen> createState() => _ManageProgramWorkoutsScreenState();
+  State<ManageProgramWorkoutsScreen> createState() =>
+      _ManageProgramWorkoutsScreenState();
 }
 
-class _ManageProgramWorkoutsScreenState extends State<ManageProgramWorkoutsScreen> {
+class _ManageProgramWorkoutsScreenState
+    extends State<ManageProgramWorkoutsScreen> {
   final _dbService = DatabaseService();
   bool _isAdding = false;
-  
-  Future<void> _showAddWorkoutSheet(List<WorkoutSession> currentWorkouts) async {
+
+  Future<void> _showAddWorkoutSheet(
+    List<WorkoutSession> currentWorkouts,
+  ) async {
     final titleController = TextEditingController();
     final durationController = TextEditingController();
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
@@ -42,67 +47,72 @@ class _ManageProgramWorkoutsScreenState extends State<ManageProgramWorkoutsScree
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Add Workout Session',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.textDark,
-                    ),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Define a new session for this program.',
-                style: TextStyle(fontSize: 14, color: AppTheme.textLight),
+                ),
               ),
               const SizedBox(height: 24),
+              Text(
+                'New Workout Session',
+                style: GoogleFonts.outfit(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Add a structured session to your program.',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  color: AppTheme.textMedium,
+                ),
+              ),
+              const SizedBox(height: 32),
               _buildModernTextField(
-                label: 'Workout Title',
+                label: 'Session Title',
                 controller: titleController,
                 hint: 'e.g. Day 1: Upper Body Flow',
+                icon: Icons.fitness_center_rounded,
               ),
               const SizedBox(height: 20),
               _buildModernTextField(
                 label: 'Estimated Duration',
                 controller: durationController,
                 hint: 'e.g. 45 min',
+                icon: Icons.timer_outlined,
               ),
               const SizedBox(height: 32),
-              GestureDetector(
-                onTap: () {
+              ElevatedButton(
+                onPressed: () {
                   if (titleController.text.isNotEmpty) {
                     Navigator.pop(context, true);
                   }
                 },
-                child: Container(
-                  width: double.infinity,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
-                    borderRadius: BorderRadius.circular(16),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  minimumSize: const Size(double.infinity, 60),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'ADD SESSION',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'CREATE SESSION',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    color: Colors.white,
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -124,7 +134,10 @@ class _ManageProgramWorkoutsScreenState extends State<ManageProgramWorkoutsScree
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: Colors.redAccent,
+              ),
             );
           }
         } finally {
@@ -138,26 +151,42 @@ class _ManageProgramWorkoutsScreenState extends State<ManageProgramWorkoutsScree
     required String label,
     required TextEditingController controller,
     required String hint,
+    IconData? icon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
+          style: GoogleFonts.outfit(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
             color: AppTheme.textDark,
-            letterSpacing: 0.5,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         TextField(
           controller: controller,
+          style: GoogleFonts.outfit(fontSize: 15),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppTheme.textLight, fontSize: 14),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            prefixIcon: icon != null
+                ? Icon(icon, color: AppTheme.primary, size: 20)
+                : null,
+            hintStyle: GoogleFonts.outfit(
+              color: AppTheme.textLight,
+              fontSize: 14,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF5F5F5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
           ),
         ),
       ],
@@ -167,186 +196,321 @@ class _ManageProgramWorkoutsScreenState extends State<ManageProgramWorkoutsScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppTheme.textDark,
+            size: 20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Column(
           children: [
-            const Text(
-              'STEP 2: ADD WORKOUTS',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.primary,
-                letterSpacing: 1.2,
+            Text(
+              'Session Designer',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
               ),
             ),
             Text(
               widget.program.title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                color: AppTheme.textDark,
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                color: AppTheme.primary,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
-        backgroundColor: AppTheme.surface,
         centerTitle: true,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
-      body: _isAdding
-          ? const Center(child: CircularProgressIndicator())
-          : StreamBuilder<List<WorkoutSession>>(
-              stream: _dbService.getWorkoutsStream(widget.program.id),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+      body: Column(
+        children: [
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: _buildProgressHeader(),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: _isAdding
+                ? const Center(child: CircularProgressIndicator())
+                : StreamBuilder<List<WorkoutSession>>(
+                    stream: _dbService.getWorkoutsStream(widget.program.id),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                final workouts = snapshot.data ?? [];
+                      final workouts = snapshot.data ?? [];
 
-                if (workouts.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(32),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withOpacity(0.05),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(Icons.fitness_center_rounded, size: 64, color: AppTheme.primary.withOpacity(0.5)),
-                          ),
-                          const SizedBox(height: 24),
-                          const Text(
-                            'No sessions yet',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: AppTheme.textDark,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Click the button below to add your first workout session to this program.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: AppTheme.textLight, fontSize: 14),
-                          ),
-                          const SizedBox(height: 32),
-                          ElevatedButton.icon(
-                            onPressed: () => _showAddWorkoutSheet(workouts),
-                            icon: const Icon(Icons.add_rounded),
-                            label: const Text('Add First Session'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primary,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+                      if (workouts.isEmpty) {
+                        return _buildEmptyState(workouts);
+                      }
 
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            itemCount: workouts.length,
-            itemBuilder: (context, index) {
-              final workout = workouts[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                  border: Border.all(color: AppTheme.divider.withOpacity(0.5)),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(20),
-                      title: Text(
-                        workout.title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 18,
-                          color: AppTheme.textDark,
-                        ),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Row(
-                          children: [
-                            Icon(Icons.bolt_rounded, size: 14, color: AppTheme.primary.withOpacity(0.7)),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${workout.exercises.length} Exercises',
-                              style: TextStyle(fontSize: 12, color: AppTheme.textMedium, fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(width: 16),
-                            Icon(Icons.access_time_rounded, size: 14, color: AppTheme.textLight),
-                            const SizedBox(width: 4),
-                            Text(
-                              workout.totalDuration,
-                              style: TextStyle(fontSize: 12, color: AppTheme.textLight, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                      trailing: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.primary),
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EditWorkoutExercisesScreen(
-                              programId: widget.program.id,
-                              workout: workout,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                      return ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+                        itemCount: workouts.length,
+                        itemBuilder: (context, index) {
+                          final workout = workouts[index];
+                          return _buildWorkoutCard(workout, index);
+                        },
+                      );
+                    },
                   ),
-                ),
-              );
-            },
-          );
-        },
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // We need current workouts to set the next orderIndex
-          // Since we are in a stream, we can't easily get them here
-          // But we can trigger a one-time fetch or use a variable
           _dbService.getWorkoutsStream(widget.program.id).first.then((list) {
             _showAddWorkoutSheet(list);
           });
         },
         backgroundColor: AppTheme.primary,
-        elevation: 4,
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        label: Text(
+          'ADD SESSION',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressHeader() {
+    return Row(
+      children: [
+        _buildStepIndicator('1', 'Basic Info', true, true),
+        Expanded(
+          child: Container(
+            height: 2,
+            color: AppTheme.primary,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+        ),
+        _buildStepIndicator('2', 'Workouts', true, false),
+        Expanded(
+          child: Container(
+            height: 2,
+            color: Colors.grey[200],
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+        ),
+        _buildStepIndicator('3', 'Exercises', false, false),
+      ],
+    );
+  }
+
+  Widget _buildStepIndicator(
+    String step,
+    String label,
+    bool isActive,
+    bool isDone,
+  ) {
+    return Column(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: isActive
+                ? (isDone ? AppTheme.primary : Colors.white)
+                : Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isActive ? AppTheme.primary : Colors.grey[300]!,
+            ),
+          ),
+          child: Center(
+            child: isDone
+                ? const Icon(Icons.check, color: Colors.white, size: 16)
+                : Text(
+                    step,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isActive ? AppTheme.primary : Colors.grey[400],
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: isActive ? AppTheme.primary : Colors.grey[400],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWorkoutCard(WorkoutSession workout, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        border: Border.all(color: AppTheme.primary.withOpacity(0.05)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(20),
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Center(
+            child: Text(
+              '${index + 1}',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w900,
+                color: AppTheme.primary,
+                fontSize: 18,
+              ),
+            ),
+          ),
+        ),
+        title: Text(
+          workout.title,
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w900,
+            fontSize: 18,
+            color: AppTheme.textDark,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              Icon(Icons.bolt_rounded, size: 14, color: AppTheme.primary),
+              const SizedBox(width: 4),
+              Text(
+                '${workout.exercises.length} Exercises',
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: AppTheme.textMedium,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Icon(
+                Icons.access_time_rounded,
+                size: 14,
+                color: AppTheme.textLight,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                workout.totalDuration,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: AppTheme.textLight,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios_rounded,
+          size: 16,
+          color: AppTheme.textLight,
+        ),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EditWorkoutExercisesScreen(
+                programId: widget.program.id,
+                workout: workout,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(List<WorkoutSession> workouts) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.fitness_center_rounded,
+                size: 64,
+                color: AppTheme.primary.withOpacity(0.5),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No sessions yet',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add your first workout session to this program.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                color: AppTheme.textLight,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => _showAddWorkoutSheet(workouts),
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text(
+                'Add First Session',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

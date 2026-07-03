@@ -56,7 +56,7 @@ class SupplementsGridStep extends StatelessWidget {
             itemBuilder: (context, index) {
               final item = supplements[index];
               final label = item['label'] as String;
-              final image = item['image'] as String?;
+              final image = item['image'];
               final icon = item['icon'] as IconData?;
               final isSelected = selectedSupplements.contains(label);
 

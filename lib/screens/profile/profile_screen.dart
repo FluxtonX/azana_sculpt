@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:azana_sculpt/screens/messages/messages_screen.dart';
-import 'package:azana_sculpt/texting.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +14,7 @@ import '../login/login_screen.dart';
 import 'badges_screen.dart';
 import '../programs/premium_programs_screen.dart';
 import 'client_edit_profile_screen.dart';
+import '../settings/terms_and_privacy_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -139,6 +139,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       children: [
                         _buildProfileInfoCard(user),
+                        const SizedBox(height: 24),
+                        _buildFitnessMetricsCard(user),
                         const SizedBox(height: 24),
                         if (_unlockedBadges.isNotEmpty) ...[
                           _buildBadgesPreviewRow(context),
@@ -389,6 +391,163 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildFitnessMetricsCard(UserModel? user) {
+    final hasBmi = user?.bmi != null;
+    final hasBmr = user?.bmr != null;
+    final hasDailyCalories = user?.dailyCalories != null;
+    final hasTargetCalories = user?.targetCalories != null;
+    final hasProtein = user?.proteinGoal != null;
+    final hasWater = user?.waterGoal != null;
+
+    final hasAnyMetric =
+        hasBmi ||
+        hasBmr ||
+        hasDailyCalories ||
+        hasTargetCalories ||
+        hasProtein ||
+        hasWater;
+
+    if (!hasAnyMetric) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.textDark.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.monitor_heart_rounded,
+                  color: AppTheme.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Fitness Metrics',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textDark,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              if (hasBmi)
+                _buildMetricTile(
+                  icon: Icons.speed_rounded,
+                  value: user!.bmi!.toStringAsFixed(1),
+                  label: 'BMI',
+                  color: const Color(0xFF3B82F6),
+                ),
+              if (hasBmr)
+                _buildMetricTile(
+                  icon: Icons.local_fire_department_rounded,
+                  value: '${user!.bmr!.toInt()}',
+                  label: 'BMR (kcal)',
+                  color: const Color(0xFFEF4444),
+                ),
+              if (hasDailyCalories)
+                _buildMetricTile(
+                  icon: Icons.bolt_rounded,
+                  value: '${user!.dailyCalories!.toInt()}',
+                  label: 'Daily Cal',
+                  color: const Color(0xFFF59E0B),
+                ),
+              if (hasTargetCalories)
+                _buildMetricTile(
+                  icon: Icons.track_changes_rounded,
+                  value: '${user!.targetCalories!.toInt()}',
+                  label: 'Target Cal',
+                  color: const Color(0xFF10B981),
+                ),
+              if (hasProtein)
+                _buildMetricTile(
+                  icon: Icons.egg_alt_rounded,
+                  value: '${user!.proteinGoal!.toInt()}g',
+                  label: 'Protein',
+                  color: const Color(0xFF8B5CF6),
+                ),
+              if (hasWater)
+                _buildMetricTile(
+                  icon: Icons.water_drop_rounded,
+                  value: '${user!.waterGoal!.toStringAsFixed(1)}L',
+                  label: 'Water',
+                  color: const Color(0xFF06B6D4),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricTile({
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color color,
+  }) {
+    return SizedBox(
+      width: (MediaQuery.of(context).size.width - 40 - 48 - 12) / 2,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.12)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 10),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textLight,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBadgesPreviewRow(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -513,8 +672,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ? DatabaseService().getUnreadMessagesCountStream(user!.uid)
                 : (user?.coachId != null)
                 ? DatabaseService().getChatUnreadCountStream(
-                    '${user!.uid}_${user!.coachId}',
-                    user!.uid,
+                    '${user!.uid}_${user.coachId}',
+                    user.uid,
                   )
                 : Stream.value(0),
             builder: (context, snapshot) {
@@ -531,16 +690,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   );
                 },
-              );
-            },
-          ),
-          _buildMenuItem(
-            Icons.track_changes_rounded,
-            'Goals & Preferences',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => WorkoutTestingScreen()),
               );
             },
           ),
@@ -564,18 +713,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           _buildMenuItem(Icons.settings_outlined, 'Settings', onTap: () {}),
           _buildMenuItem(
+            Icons.gavel_rounded,
+            'Terms & Privacy Policy',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TermsAndPrivacyScreen()),
+            ),
+          ),
+          _buildMenuItem(
             Icons.logout_rounded,
             'Log Out',
             isTrailing: false,
             iconColor: Colors.redAccent,
             textColor: Colors.redAccent,
             onTap: () async {
-              await AuthService().signOut();
-              if (context.mounted) {
-                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (route) => false,
-                );
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: const Color(0xFFFFF8F8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  title: const Text(
+                    'Log Out',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                  content: const Text(
+                    'Are you sure you want to log out of your account?',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      color: AppTheme.textMedium,
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Log Out',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await AuthService().signOut();
+                if (context.mounted) {
+                  Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
               }
             },
           ),

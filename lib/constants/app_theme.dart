@@ -6,12 +6,12 @@ class AppTheme {
   AppTheme._();
 
   // ── Brand Colors ───────────────────────────────────────────────────────────
-  static const Color primary        = Color(0xFFD4847A); // Mauve-Rose
-  static const Color primaryLight   = Color(0xFFF2C4BB); // Light Blush
-  static const Color primaryDark    = Color(0xFFB86560); // Deep Rose
+  static const Color primary        = Color(0xFFCE8981); // Dusty Rose (Muted)
+  static const Color primaryLight   = Color(0xFFF2D1CC); // Soft Blush
+  static const Color primaryDark    = Color(0xFFA6625B); // Muted Terracotta
   static const Color accent         = Color(0xFFCDA96E); // Golden Crown
   static const Color accentLight    = Color(0xFFE8CCA0); // Soft Gold
-  static const Color goldAccent     = Color(0xFFCDA96E); // Alias for accent — use for achievement/reward moments
+  static const Color goldAccent     = Color(0xFFCDA96E); // Alias for accent
   static const Color goldGlow       = Color(0x33CDA96E); // 20% opacity gold for shadows/glows
   static const Color glassSurface   = Color(0xF0FFFFFF); // 94% opaque white for glassmorphism
 

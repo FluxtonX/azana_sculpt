@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import '../../constants/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../models/user_model.dart';
 import '../../widgets/animated_auth_button.dart';
+import '../settings/terms_and_privacy_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -184,87 +186,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   const SizedBox(height: 30),
 
-                  // ── Role Selection Toggle ────────────────────────────────
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F7),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFEAEAEA)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _selectedRole = 'client'),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: _selectedRole == 'client'
-                                    ? AppTheme.primary
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: _selectedRole == 'client'
-                                    ? [
-                                        BoxShadow(
-                                          color: AppTheme.primary.withOpacity(0.3),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        )
-                                      ]
-                                    : [],
-                              ),
-                              child: Text(
-                                'Client',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: _selectedRole == 'client'
-                                      ? Colors.white
-                                      : AppTheme.textMedium,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _selectedRole = 'coach'),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: _selectedRole == 'coach'
-                                    ? AppTheme.primary
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: _selectedRole == 'coach'
-                                    ? [
-                                        BoxShadow(
-                                          color: AppTheme.primary.withOpacity(0.3),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        )
-                                      ]
-                                    : [],
-                              ),
-                              child: Text(
-                                'Coach',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: _selectedRole == 'coach'
-                                      ? Colors.white
-                                      : AppTheme.textMedium,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 24),
 
                   // ── Full Name Field ──────────────────────────────────────
@@ -376,32 +297,34 @@ class _SignupScreenState extends State<SignupScreen> {
                               TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: "I agree  ",
+                                    text: "I agree to A'zana Sculpt's ",
                                     style: TextStyle(
                                       color: AppTheme.primary.withOpacity(0.7),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const TextSpan(
-                                    text: 'Terms of Service',
-                                    style: TextStyle(
-                                      color: AppTheme.primary,
-                                      fontWeight: FontWeight.w600,
                                       fontSize: 12,
                                     ),
                                   ),
                                   TextSpan(
-                                    text: ' and ',
-                                    style: TextStyle(
-                                      color: AppTheme.primary.withOpacity(0.7),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const TextSpan(
-                                    text: 'Privacy Policy',
-                                    style: TextStyle(
+                                    text: 'Terms & Conditions, Coaching agreement, & No Refund Policy',
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const TermsAndPrivacyScreen()),
+                                        );
+                                      },
+                                    style: const TextStyle(
                                       color: AppTheme.primary,
                                       fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: '.',
+                                    style: TextStyle(
+                                      color: AppTheme.primary.withOpacity(0.7),
                                       fontSize: 12,
                                     ),
                                   ),

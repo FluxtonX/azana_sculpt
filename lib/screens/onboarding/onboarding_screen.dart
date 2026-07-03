@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../constants/app_theme.dart';
 import '../../services/database_service.dart';
+import '../../services/fitness_calculation_service.dart';
 import '../../models/user_model.dart';
 import '../../widgets/assessment_progress_bar.dart';
 import '../../widgets/app_button.dart';
@@ -80,32 +81,68 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final userProfile = UserModel(
-        uid: user.uid,
-        email: user.email ?? '',
-        age: _selectedAge,
-        height: _selectedHeight.toString(),
-        heightUnit: _heightUnit,
-        weight: _selectedWeight.toString(),
-        weightUnit: _weightUnit,
-        fitnessGoal: _selectedGoal,
-        activityLevel: _activityLevel.toString(),
-        hasGymAccess: _hasGymAccess,
-        supplements: _selectedSupplements,
-        bodyVision: _dreamBodyController.text,
-        weightliftingExperience: _selectedExperience == 'Advanced' ? 5.0 : (_selectedExperience == 'Intermediate' ? 2.0 : 0.0),
-        equipment: _selectedEquipment,
-        sleepQuality: _selectedSleepQuality,
-        commitmentLevel: _commitmentLevel.toDouble(),
-        motivationLevel: _motivationLevel.toDouble(),
-        mentalBarriers: _challengeController.text,
-        referral: _sourceController.text,
-        socialMedia: _socialController.text,
-        role: 'client',
-        updatedAt: DateTime.now(),
-      );
+      // 1. Fetch current profile to preserve isElite and other fields
+      final existingProfile = await DatabaseService().getUserProfile(user.uid);
+      
+      UserModel userProfile;
+      
+      if (existingProfile != null) {
+        // 2. Use copyWith to update only onboarding fields
+        userProfile = existingProfile.copyWith(
+          age: _selectedAge,
+          height: _selectedHeight.toString(),
+          heightUnit: _heightUnit,
+          weight: _selectedWeight.toString(),
+          weightUnit: _weightUnit,
+          fitnessGoal: _selectedGoal,
+          activityLevel: _activityLevel.toString(),
+          hasGymAccess: _hasGymAccess,
+          supplements: _selectedSupplements,
+          bodyVision: _dreamBodyController.text,
+          weightliftingExperience: _selectedExperience == 'Advanced' ? 5.0 : (_selectedExperience == 'Intermediate' ? 2.0 : 0.0),
+          equipment: _selectedEquipment,
+          sleepQuality: _selectedSleepQuality,
+          commitmentLevel: _commitmentLevel.toDouble(),
+          motivationLevel: _motivationLevel.toDouble(),
+          mentalBarriers: _challengeController.text,
+          referral: _sourceController.text,
+          socialMedia: _socialController.text,
+          isOnboardingComplete: true,
+          updatedAt: DateTime.now(),
+        );
+      } else {
+        // Fallback: Create new if doesn't exist (though it should)
+        userProfile = UserModel(
+          uid: user.uid,
+          email: user.email ?? '',
+          age: _selectedAge,
+          height: _selectedHeight.toString(),
+          heightUnit: _heightUnit,
+          weight: _selectedWeight.toString(),
+          weightUnit: _weightUnit,
+          fitnessGoal: _selectedGoal,
+          activityLevel: _activityLevel.toString(),
+          hasGymAccess: _hasGymAccess,
+          supplements: _selectedSupplements,
+          bodyVision: _dreamBodyController.text,
+          weightliftingExperience: _selectedExperience == 'Advanced' ? 5.0 : (_selectedExperience == 'Intermediate' ? 2.0 : 0.0),
+          equipment: _selectedEquipment,
+          sleepQuality: _selectedSleepQuality,
+          commitmentLevel: _commitmentLevel.toDouble(),
+          motivationLevel: _motivationLevel.toDouble(),
+          mentalBarriers: _challengeController.text,
+          referral: _sourceController.text,
+          socialMedia: _socialController.text,
+          role: 'client',
+          isOnboardingComplete: true,
+          updatedAt: DateTime.now(),
+        );
+      }
 
       await DatabaseService().saveUserProfile(userProfile);
+
+      // Auto-calculate and persist fitness metrics
+      await FitnessCalculationService().calculateAndSave(userProfile);
 
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
@@ -305,9 +342,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               child: AppButton(
                                 text: "View My Profile →",
                                 backgroundColor: Colors.white.withOpacity(0.2),
-                                onPressed: () {
-                                  Navigator.of(context).pushReplacementNamed('/home');
-                                },
+                                onPressed: _submitOnboarding,
                               ),
                             ),
                           ],

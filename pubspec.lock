@@ -113,6 +113,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.1"
+  convert:
+    dependency: transitive
+    description:
+      name: convert
+      sha256: b30acd5944035672bc15c6b7a8b47d773e41e2f17de064350988c5d02adb1c68
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.2"
   cross_file:
     dependency: transitive
     description:
@@ -145,6 +153,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.9"
+  dbus:
+    dependency: transitive
+    description:
+      name: dbus
+      sha256: d0c98dcd4f5169878b6cf8f6e0a52403a9dff371a3e2f019697accbf6f44a270
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.12"
   device_frame:
     dependency: transitive
     description:
@@ -153,6 +169,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  device_info_plus:
+    dependency: transitive
+    description:
+      name: device_info_plus
+      sha256: b4fed1b2835da9d670d7bed7db79ae2a94b0f5ad6312268158a9b5479abbacdd
+      url: "https://pub.dev"
+    source: hosted
+    version: "12.4.0"
+  device_info_plus_platform_interface:
+    dependency: transitive
+    description:
+      name: device_info_plus_platform_interface
+      sha256: e1ea89119e34903dca74b883d0dd78eb762814f97fb6c76f35e9ff74d261a18f
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.3"
   device_preview:
     dependency: "direct main"
     description:
@@ -193,6 +225,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.1"
+  file_picker:
+    dependency: "direct main"
+    description:
+      name: file_picker
+      sha256: "57d9a1dd5063f85fa3107fb42d1faffda52fdc948cefd5fe5ea85267a5fc7343"
+      url: "https://pub.dev"
+    source: hosted
+    version: "10.3.10"
   file_selector_linux:
     dependency: transitive
     description:
@@ -273,6 +313,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.5.1"
+  firebase_storage:
+    dependency: "direct main"
+    description:
+      name: firebase_storage
+      sha256: "2a9c9046eca3d4426eac73b671891666297a215019538e0af87eacec7e77ccf1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "13.2.0"
+  firebase_storage_platform_interface:
+    dependency: transitive
+    description:
+      name: firebase_storage_platform_interface
+      sha256: "83f858784ebfdbe4d033d97c431ff67541d41266277ec290c169ce6c4bfda485"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.2.19"
+  firebase_storage_web:
+    dependency: transitive
+    description:
+      name: firebase_storage_web
+      sha256: "75003d7529cd458c93cfe12194773df1681d3b4722f70e5b4b4ff7b43ab8cd72"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.11.4"
   fixnum:
     dependency: transitive
     description:
@@ -874,6 +938,78 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "12.6.0"
+  syncfusion_flutter_core:
+    dependency: transitive
+    description:
+      name: syncfusion_flutter_core
+      sha256: e1fdfcc3ed7e1f040ba95838780b2eb1857e3e5eccb817fbe94ea2b09c35eac4
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.18"
+  syncfusion_flutter_pdf:
+    dependency: transitive
+    description:
+      name: syncfusion_flutter_pdf
+      sha256: "4077abff3d3dcae757317c0a85cb607b98cc6ea8f3b47c7d8488d4144ef01a9f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.18"
+  syncfusion_flutter_pdfviewer:
+    dependency: "direct main"
+    description:
+      name: syncfusion_flutter_pdfviewer
+      sha256: "4bc26c493a017ea615a2c232031f3aa46642ddb22d82a8d88d8c5e5ea7fe4c7d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.18"
+  syncfusion_flutter_signaturepad:
+    dependency: transitive
+    description:
+      name: syncfusion_flutter_signaturepad
+      sha256: "56c35321879b900f59a91e0758af7ca66973447bfdaeb643fe1da0084cbc5b22"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.18"
+  syncfusion_pdfviewer_linux:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_linux
+      sha256: bae7feb109b38ecf9f8be99bd032503adf98e56da048307a17af8515d0f9d2ed
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.18"
+  syncfusion_pdfviewer_macos:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_macos
+      sha256: "5c02ead2a430cd3f203639ede38ce2e06fb6c8aab6791b0d15c01436f882f482"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.18"
+  syncfusion_pdfviewer_platform_interface:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_platform_interface
+      sha256: "65641e064385ac65253930ec96a6edc2eea781c9e15bf3d5fa15e459037817e7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.18"
+  syncfusion_pdfviewer_web:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_web
+      sha256: c55201d9eda49f543b9ad21f539b0f5fbe45ca1a3b30081ee471eb4dff7132f4
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.18"
+  syncfusion_pdfviewer_windows:
+    dependency: transitive
+    description:
+      name: syncfusion_pdfviewer_windows
+      sha256: "1b706e58a95c794687d037e055cf0580370ceee27a59a8cd4e14368534161af8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "31.2.18"
   term_glyph:
     dependency: transitive
     description:
@@ -1066,6 +1202,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.24.4"
+  win32:
+    dependency: transitive
+    description:
+      name: win32
+      sha256: d7cb55e04cd34096cd3a79b3330245f54cb96a370a1c27adb3c84b917de8b08e
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.15.0"
+  win32_registry:
+    dependency: transitive
+    description:
+      name: win32_registry
+      sha256: "6f1b564492d0147b330dd794fee8f512cec4977957f310f9951b5f9d83618dae"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.0"
   xdg_directories:
     dependency: transitive
     description:

@@ -32,6 +32,28 @@ class ExerciseModel {
     };
   }
 
+  ExerciseModel copyWith({
+    String? id,
+    String? name,
+    String? instruction,
+    int? sets,
+    String? reps,
+    int? restSeconds,
+    String? videoUrl,
+    String? thumbnailUrl,
+  }) {
+    return ExerciseModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      instruction: instruction ?? this.instruction,
+      sets: sets ?? this.sets,
+      reps: reps ?? this.reps,
+      restSeconds: restSeconds ?? this.restSeconds,
+      videoUrl: videoUrl ?? this.videoUrl,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+    );
+  }
+
   factory ExerciseModel.fromMap(Map<String, dynamic> map) {
     return ExerciseModel(
       id: map['id'] ?? '',
@@ -82,7 +104,8 @@ class WorkoutSession {
       id: map['id'] ?? '',
       programId: map['programId'] ?? '',
       title: map['title'] ?? '',
-      exercises: (map['exercises'] as List?)
+      exercises:
+          (map['exercises'] as List?)
               ?.map((e) => ExerciseModel.fromMap(e))
               .toList() ??
           [],

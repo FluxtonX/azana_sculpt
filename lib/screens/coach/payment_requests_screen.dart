@@ -202,7 +202,12 @@ class PaymentRequestsScreen extends StatelessWidget {
 
   void _handleAction(BuildContext context, String uid, String status) async {
     try {
-      await DatabaseService().updatePaymentRequestStatus(uid: uid, status: status);
+      final coachId = AuthService().currentUser?.uid;
+      await DatabaseService().updatePaymentRequestStatus(
+        uid: uid,
+        status: status,
+        coachId: coachId,
+      );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

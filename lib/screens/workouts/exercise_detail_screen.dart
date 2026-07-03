@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:azana_sculpt/services/database_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +18,7 @@ import '../../models/workout_models.dart';
 import '../../services/google_drive_service.dart';
 import '../../services/milestone_service.dart';
 import '../../services/streak_service.dart';
+import '../../constants/api_keys.dart';
 import '../../services/workout_progress_service.dart';
 import 'workout_complete_screen.dart';
 
@@ -25,11 +28,17 @@ enum _RestPhase { nextSet, exerciseComplete }
 class ExerciseDetailScreen extends StatefulWidget {
   final String folderName;
   final String? folderId;
+  final String? directVideoUrl;
+  final String? assignmentId;
+  final ExerciseModel? directExercise;
 
   const ExerciseDetailScreen({
     super.key,
     required this.folderName,
     this.folderId,
+    this.directVideoUrl,
+    this.assignmentId,
+    this.directExercise,
   });
 
   @override
@@ -63,9 +72,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   Timer? _restTimer;
   _RestPhase? _restPhase;
   int _videoLoadingProgress = 0;
-  String _videoLoadingStatus = 'Fetch This Video Now';
-  bool _isCurrentVideoCached = false;
-  String? _videoErrorMessage;
 
   // Track download status for the list
   final Map<String, int> _downloadProgress = {};
@@ -120,17 +126,11 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     if (!shouldLoad) {
       _isTransitioningExercise = false;
       _videoLoadingProgress = 0;
-      _videoLoadingStatus = '';
-      _isCurrentVideoCached = false;
-      _videoErrorMessage = null;
       return;
     }
 
     _isTransitioningExercise = true;
     _videoLoadingProgress = 0;
-    _videoLoadingStatus = 'Fetch This Video Now';
-    _isCurrentVideoCached = false;
-    _videoErrorMessage = null;
 
     // Auto-pre-fetch next video when one starts loading
     if (_hasNextExercise) {
@@ -141,7 +141,8 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   Future<void> _preFetchVideo(int index) async {
     if (index < 0 || index >= _exercises.length) return;
     final exercise = _exercises[index];
-    if (exercise.videoUrl == null || _cachedExerciseIds.contains(exercise.id)) return;
+    if (exercise.videoUrl == null || _cachedExerciseIds.contains(exercise.id))
+      return;
 
     try {
       await _globalCache.getOrDownloadVideo(
@@ -171,8 +172,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
 
     setState(() {
       _videoLoadingProgress = progress.clamp(0, 100);
-      _videoLoadingStatus = status;
-      _isCurrentVideoCached = fromCache;
       if (fromCache || progress >= 100) {
         _cachedExerciseIds.add(_currentExercise.id);
       }
@@ -222,13 +221,42 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   }
 
   Future<void> _loadExercises() async {
-    if (widget.folderId == null) {
-      debugPrint('Error: folderId is null for category "${widget.folderName}"');
+    if (widget.folderId == null && widget.directVideoUrl == null) {
+      debugPrint('Error: folderId and directVideoUrl are both null');
       setState(() {
         _error =
-            'No folder ID found for "${widget.folderName}". This can happen if the folders were not fully imported. Please try clicking the refresh icon on the previous screen.';
+            'No workout source found. This can happen if the assignment was not correctly configured.';
         _isLoading = false;
       });
+      return;
+    }
+
+    // Handle direct video assignment
+    if (widget.directVideoUrl != null) {
+      debugPrint('Loading direct video workout: ${widget.directVideoUrl}');
+      final provided = widget.directExercise;
+      final singleExercise =
+          provided?.copyWith(
+            videoUrl: GoogleDriveService.getDirectVideoUrl(
+              widget.directVideoUrl!,
+            ),
+          ) ??
+          ExerciseModel(
+            id: 'direct_${widget.folderName.hashCode}',
+            name: widget.folderName,
+            instruction: 'Follow the training video provided by your coach.',
+            sets: 4,
+            reps: '8-10',
+            restSeconds: 30,
+            videoUrl: GoogleDriveService.getDirectVideoUrl(
+              widget.directVideoUrl!,
+            ),
+          );
+
+      setState(() {
+        _applyLoadedExercises([singleExercise]);
+      });
+      _playSlide(isForward: true);
       return;
     }
 
@@ -425,9 +453,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     setState(() {
       _isTransitioningExercise = false;
       _videoLoadingProgress = 100;
-      _videoLoadingStatus = _isCurrentVideoCached
-          ? 'Saved In SharedPreferences'
-          : 'Video Ready';
     });
   }
 
@@ -435,8 +460,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     if (!mounted) return;
     setState(() {
       _isTransitioningExercise = false;
-      _videoErrorMessage = message;
-      _videoLoadingStatus = message;
     });
   }
 
@@ -473,12 +496,24 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     if (_completionSummary != null) return _completionSummary!;
 
     final previousStreak = await StreakService().loadStreak();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      debugPrint(
+        'Syncing completion to Firestore for assignment: ${widget.folderName}',
+      );
+      await DatabaseService().markAssignmentAsCompleted(
+        uid,
+        widget.folderName,
+        assignmentId: widget.assignmentId,
+      );
+    }
+
     final progress = await WorkoutProgressService().recordWorkoutCompletion(
       scoreIncrement: 10,
+      completionId: widget.assignmentId,
     );
 
     var updatedStreak = previousStreak;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null && uid.isNotEmpty) {
       updatedStreak = await StreakService().updateStreak(uid);
     }
@@ -491,15 +526,17 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     final summary = WorkoutCompletionSummary(
       title: unlockedMilestone?.title ?? 'Workout Complete!',
       subtitle: unlockedMilestone == null
-          ? 'You finished ${widget.folderName} and earned +10 score on your fitness journey.'
+          ? 'You finished ${widget.folderName}. Your fitness score is updated from your real progress.'
           : 'Amazing work! You unlocked a new milestone and your progress is growing stronger.',
       badgeAssetPath: unlockedMilestone?.assetPath,
       durationMinutes: _estimatedDurationMinutes(),
       exerciseCount: _exercises.length,
       weeklyCompleted: progress.weeklyCompletedWorkouts,
       weeklyGoal: WorkoutProgressService.weeklyGoal,
-      streakDays: updatedStreak.currentStreak == 0 ? 1 : updatedStreak.currentStreak,
-      scoreAdded: 10,
+      streakDays: updatedStreak.currentStreak == 0
+          ? 1
+          : updatedStreak.currentStreak,
+      scoreAdded: 0,
       totalScore: progress.fitnessScore.round(),
     );
 
@@ -741,13 +778,41 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
                 ),
               ),
             ),
+            // Background Download Progress (Subtle)
+            if (!_isTransitioningExercise && _videoLoadingProgress < 100)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 4,
+                  color: Colors.white12,
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: _videoLoadingProgress / 100,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primary.withValues(alpha: 0.5),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // Initial Loading Overlay (Blocks UI until stream starts)
             AnimatedOpacity(
-              duration: const Duration(milliseconds: 180),
+              duration: const Duration(milliseconds: 300),
               opacity: _isTransitioningExercise ? 1 : 0,
               child: IgnorePointer(
                 ignoring: !_isTransitioningExercise,
                 child: Container(
-                  color: Colors.black.withValues(alpha: 0.5),
+                  color: Colors.black54,
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -755,45 +820,15 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
                         const CircularProgressIndicator(
                           color: AppTheme.primary,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         Text(
-                          'Fetch $_videoLoadingProgress%',
-                          style: const TextStyle(
-                            color: AppTheme.primary,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
+                          'Starting Stream...',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _videoLoadingStatus.isEmpty
-                              ? 'Fetch This Video Now'
-                              : _videoLoadingStatus,
-                          style: const TextStyle(
-                            color: _textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (_isCurrentVideoCached) ...[
-                          const SizedBox(height: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: const Text(
-                              'Instant Replay Ready',
-                              style: TextStyle(
-                                color: AppTheme.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -943,7 +978,9 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
                         : _surfaceStrongColor,
                     borderRadius: BorderRadius.circular(999),
                     border: isActive
-                        ? Border.all(color: AppTheme.primary.withValues(alpha: 0.5))
+                        ? Border.all(
+                            color: AppTheme.primary.withValues(alpha: 0.5),
+                          )
                         : null,
                   ),
                 ),
@@ -962,10 +999,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppTheme.primary.withValues(alpha: 0.1),
-            Colors.transparent,
-          ],
+          colors: [AppTheme.primary.withValues(alpha: 0.1), Colors.transparent],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1073,7 +1107,9 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
           backgroundColor: isDone ? _surfaceStrongColor : AppTheme.primary,
           foregroundColor: _textPrimary,
           padding: const EdgeInsets.symmetric(vertical: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
           elevation: 0,
         ),
         child: Row(
@@ -1337,31 +1373,47 @@ class _VideoPlayerHeroState extends State<_VideoPlayerHero> {
   }
 
   Future<void> _init() async {
-    File? videoFile;
-    var fromCache = false;
+    await SharedPreferences.getInstance();
+    final directory = await getApplicationDocumentsDirectory();
+    final cacheDirectory = Directory('${directory.path}/exercise_video_cache');
+    final file = File(
+      '${cacheDirectory.path}/${widget.exerciseId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_')}.mp4',
+    );
 
-    try {
-      final result = await widget.cache.getOrDownloadVideo(
-        exerciseId: widget.exerciseId,
-        videoUrl: widget.videoUrl,
-        onProgress: (progress, status, {required fromCache}) {
-          if (!mounted) return;
-          widget.onLoadingProgress?.call(
-            progress,
-            status,
-            fromCache: fromCache,
-          );
-        },
-      );
-      videoFile = result.file;
-      fromCache = result.fromCache;
-    } catch (error) {
-      debugPrint('Video cache error: $error');
+    bool useCache = false;
+    if (await file.exists() && await file.length() > 0) {
+      useCache = true;
     }
 
-    _controller = videoFile != null
-        ? VideoPlayerController.file(videoFile)
-        : VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+    if (useCache) {
+      debugPrint('Playing from cache: ${file.path}');
+      _controller = VideoPlayerController.file(file);
+    } else {
+      debugPrint('Streaming from URL: ${widget.videoUrl}');
+      _controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.videoUrl),
+        httpHeaders: {
+          'X-Android-Package': 'com.example.azana_sculpt',
+          'X-Goog-Api-Key': ApiKeys.googleDriveApi,
+        },
+      );
+
+      // Start background download
+      unawaited(
+        widget.cache.getOrDownloadVideo(
+          exerciseId: widget.exerciseId,
+          videoUrl: widget.videoUrl,
+          onProgress: (progress, status, {required fromCache}) {
+            if (!mounted) return;
+            widget.onLoadingProgress?.call(
+              progress,
+              status,
+              fromCache: fromCache,
+            );
+          },
+        ),
+      );
+    }
 
     try {
       await _controller!.initialize();
@@ -1372,12 +1424,11 @@ class _VideoPlayerHeroState extends State<_VideoPlayerHero> {
         ..play();
 
       setState(() => _initialized = true);
-      widget.onLoadingProgress?.call(
-        100,
-        fromCache ? 'Saved In SharedPreferences' : 'Fetched And Saved',
-        fromCache: true,
-      );
       widget.onReady?.call();
+
+      if (useCache) {
+        widget.onLoadingProgress?.call(100, 'Instant Play', fromCache: true);
+      }
     } catch (error) {
       debugPrint('Video error: $error');
       if (!mounted) return;
@@ -1488,9 +1539,12 @@ class _ExerciseVideoCache {
       await tempFile.delete();
     }
 
-    final response = await _client.send(
-      http.Request('GET', Uri.parse(videoUrl)),
-    );
+    final request = http.Request('GET', Uri.parse(videoUrl));
+    request.headers.addAll({
+      'X-Android-Package': 'com.example.azana_sculpt',
+      'X-Goog-Api-Key': ApiKeys.googleDriveApi,
+    });
+    final response = await _client.send(request);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('Failed to fetch video (${response.statusCode})');
