@@ -140,7 +140,7 @@ class _BadgesScreenState extends State<BadgesScreen>
               tween: Tween(begin: 0.0, end: progress),
               duration: const Duration(milliseconds: 1000),
               curve: Curves.easeOutCubic,
-              builder: (_, val, __) => LinearProgressIndicator(
+              builder: (context, val, child) => LinearProgressIndicator(
                 value: val,
                 minHeight: 8,
                 backgroundColor: Colors.white.withOpacity(0.2),

@@ -5,24 +5,24 @@ class UserModel {
   final String? phone;
   final String? ageRange;
   final int? age;
-  
+
   // Physical
   final String? height;
   final String? weight;
   final String? heightUnit;
   final String? weightUnit;
-  
+
   // Medical
   final bool? isTakingMedication;
   final List<String>? medicalConditions;
-  
+
   // Fitness
   final String? activityLevel;
   final bool? hasGymAccess;
   final double? weightliftingExperience;
   final List<String>? equipment;
   final String? sleepQuality;
-  
+
   // Personal
   final String? gender;
   final String? fitnessGoal;
@@ -32,7 +32,7 @@ class UserModel {
   final double? motivationLevel;
   final String? mentalBarriers;
   final String? coachingPreference;
-  
+
   // Readiness
   final String? investmentReadiness;
   final String? commitmentReadiness;
@@ -142,7 +142,8 @@ class UserModel {
       'specialties': specialties,
       'profileImageUrl': profileImageUrl,
       'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      'updatedAt':
+          updatedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
     };
   }
 
@@ -162,12 +163,15 @@ class UserModel {
       medicalConditions: List<String>.from(map['medicalConditions'] ?? []),
       activityLevel: map['activityLevel'],
       hasGymAccess: map['hasGymAccess'],
-      weightliftingExperience: (map['weightliftingExperience'] as num?)?.toDouble(),
+      weightliftingExperience: (map['weightliftingExperience'] as num?)
+          ?.toDouble(),
       equipment: List<String>.from(map['equipment'] ?? []),
       sleepQuality: map['sleepQuality'],
       gender: map['gender'],
       fitnessGoal: map['fitnessGoal'],
-      supplements: map['supplements'] != null ? List<String>.from(map['supplements']) : null,
+      supplements: map['supplements'] != null
+          ? List<String>.from(map['supplements'])
+          : null,
       bodyVision: map['bodyVision'],
       commitmentLevel: (map['commitmentLevel'] as num?)?.toDouble(),
       motivationLevel: (map['motivationLevel'] as num?)?.toDouble(),
@@ -187,10 +191,16 @@ class UserModel {
           : null,
       coachId: map['coachId'],
       bio: map['bio'],
-      specialties: map['specialties'] != null ? List<String>.from(map['specialties']) : null,
+      specialties: map['specialties'] != null
+          ? List<String>.from(map['specialties'])
+          : null,
       profileImageUrl: map['profileImageUrl'],
-      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : null,
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'])
+          : null,
     );
   }
 
@@ -235,8 +245,8 @@ class UserModel {
     DateTime? updatedAt,
   }) {
     return UserModel(
-      uid: this.uid,
-      email: this.email,
+      uid: uid,
+      email: email,
       fullName: fullName ?? this.fullName,
       phone: phone ?? this.phone,
       ageRange: ageRange ?? this.ageRange,
@@ -249,7 +259,8 @@ class UserModel {
       medicalConditions: medicalConditions ?? this.medicalConditions,
       activityLevel: activityLevel ?? this.activityLevel,
       hasGymAccess: hasGymAccess ?? this.hasGymAccess,
-      weightliftingExperience: weightliftingExperience ?? this.weightliftingExperience,
+      weightliftingExperience:
+          weightliftingExperience ?? this.weightliftingExperience,
       equipment: equipment ?? this.equipment,
       sleepQuality: sleepQuality ?? this.sleepQuality,
       gender: gender ?? this.gender,
@@ -274,7 +285,7 @@ class UserModel {
       bio: bio ?? this.bio,
       specialties: specialties ?? this.specialties,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
-      createdAt: this.createdAt,
+      createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

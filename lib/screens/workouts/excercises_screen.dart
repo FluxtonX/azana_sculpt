@@ -1,7 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_theme.dart';
+import '../../services/auth_service.dart';
+import '../../services/database_service.dart';
+import '../../models/user_model.dart';
 import 'exercise_detail_screen.dart';
 import '../../services/google_drive_service.dart';
 import 'workout_complete_screen.dart';
@@ -24,7 +28,8 @@ class ExerciseFetchScreen extends StatefulWidget {
   State<ExerciseFetchScreen> createState() => _ExerciseFetchScreenState();
 }
 
-class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerProviderStateMixin {
+class _ExerciseFetchScreenState extends State<ExerciseFetchScreen>
+    with TickerProviderStateMixin {
   bool _isLoading = true;
   String? _error;
   List<String> _exerciseNames = [];
@@ -32,11 +37,11 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
   Map<String, String> _folderIds = {};
   List<String> _unlockedFolders = [];
   final GoogleDriveService _driveService = GoogleDriveService();
-  
+
   // Search state
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
-  
+
   // Animation Controllers
   late AnimationController _listAnimationController;
 
@@ -188,7 +193,9 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
         _saveUnlockedProgress();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎉 New Category Unlocked: ${nextFolder.toUpperCase()}!'),
+            content: Text(
+              '🎉 New Category Unlocked: ${nextFolder.toUpperCase()}!',
+            ),
             backgroundColor: AppTheme.primary,
           ),
         );
@@ -198,6 +205,145 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
 
   @override
   Widget build(BuildContext context) {
+    final uid = AuthService().currentUser?.uid ?? '';
+
+    // Coach-only guard: block non-coach users from accessing workout library
+    return StreamBuilder<UserModel?>(
+      stream: DatabaseService().userProfileStream(uid),
+      builder: (context, userSnapshot) {
+        final user = userSnapshot.data;
+
+        // While loading, show a minimal spinner
+        if (userSnapshot.connectionState == ConnectionState.waiting &&
+            user == null) {
+          return const Scaffold(
+            backgroundColor: Color(0xFFFDF7F5),
+            body: Center(
+              child: CircularProgressIndicator(color: AppTheme.primary),
+            ),
+          );
+        }
+
+        // If the user is NOT a coach, show the locked screen
+        if (user == null || user.role != 'coach') {
+          return _buildLockedScreen(context);
+        }
+
+        // Coach view — show the full workout library
+        return _buildCoachWorkoutLibrary(context);
+      },
+    );
+  }
+
+  /// Locked screen shown to clients — tells them to contact their coach
+  Widget _buildLockedScreen(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFDF7F5),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.lock_outline_rounded,
+                    size: 48,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'Coach-Only Access',
+                  style: GoogleFonts.outfit(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'The workout library is managed by your coach. '
+                  'Your personalized workouts are available on the Home tab.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    color: AppTheme.textMedium,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.primary.withOpacity(0.15),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.home_rounded,
+                          color: AppTheme.primary,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Go to Home',
+                              style: GoogleFonts.outfit(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textDark,
+                              ),
+                            ),
+                            Text(
+                              'View your assigned workout & meal plan',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                color: AppTheme.textLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: AppTheme.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Full workout library — only accessible by coaches
+  Widget _buildCoachWorkoutLibrary(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFDF7F5),
       appBar: AppBar(
@@ -248,7 +394,11 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                       duration: const Duration(milliseconds: 200),
                       opacity: _isSearching ? 0.0 : 1.0,
                       child: IconButton(
-                        icon: const Icon(Icons.refresh_rounded, color: AppTheme.textDark, size: 22),
+                        icon: const Icon(
+                          Icons.refresh_rounded,
+                          color: AppTheme.textDark,
+                          size: 22,
+                        ),
                         onPressed: _isSearching ? null : _fetchExercises,
                       ),
                     ),
@@ -269,7 +419,9 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppTheme.primary.withOpacity(0.15)),
+                          border: Border.all(
+                            color: AppTheme.primary.withOpacity(0.15),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.03),
@@ -286,11 +438,14 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                             child: SizedBox(
                               width: constraints.maxWidth - 54,
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
                                 child: Center(
                                   child: TextField(
                                     controller: _searchController,
-                                    autofocus: false, // Don't autofocus to avoid keyboard popping aggressively
+                                    autofocus:
+                                        false, // Don't autofocus to avoid keyboard popping aggressively
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
@@ -300,7 +455,10 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                                       hintText: 'Find your workout...',
                                       border: InputBorder.none,
                                       isDense: true,
-                                      hintStyle: TextStyle(color: AppTheme.textLight, fontSize: 14),
+                                      hintStyle: TextStyle(
+                                        color: AppTheme.textLight,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                     onChanged: _onSearchChanged,
                                   ),
@@ -325,19 +483,25 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: _isSearching ? AppTheme.primary : const Color(0xFFF7EBE8),
+                          color: _isSearching
+                              ? AppTheme.primary
+                              : const Color(0xFFF7EBE8),
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: _isSearching ? [
-                            BoxShadow(
-                              color: AppTheme.primary.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            )
-                          ] : [],
+                          boxShadow: _isSearching
+                              ? [
+                                  BoxShadow(
+                                    color: AppTheme.primary.withOpacity(0.3),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : [],
                         ),
                         child: Icon(
                           _isSearching ? Icons.close : Icons.search,
-                          color: _isSearching ? Colors.white : AppTheme.textDark,
+                          color: _isSearching
+                              ? Colors.white
+                              : AppTheme.textDark,
                           size: 20,
                         ),
                       ),
@@ -348,19 +512,17 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
             );
           },
         ),
-        actions: const [
-          SizedBox(width: 16),
-        ],
+        actions: const [SizedBox(width: 16)],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary),
+            )
           : _error != null
           ? _buildErrorView()
           : _buildExerciseList(),
     );
   }
-
-
 
   Widget _buildErrorView() {
     return Center(
@@ -369,7 +531,11 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 64, color: AppTheme.error),
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 64,
+              color: AppTheme.error,
+            ),
             const SizedBox(height: 16),
             Text(_error!, textAlign: TextAlign.center),
             const SizedBox(height: 20),
@@ -378,8 +544,13 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text('Try Again'),
             ),
@@ -402,12 +573,20 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                 opacity: value,
                 child: Transform.scale(scale: value, child: child),
               ),
-              child: Icon(Icons.search_off_rounded, size: 80, color: AppTheme.textLight.withOpacity(0.3)),
+              child: Icon(
+                Icons.search_off_rounded,
+                size: 80,
+                color: AppTheme.textLight.withOpacity(0.3),
+              ),
             ),
             const SizedBox(height: 16),
             const Text(
               'No workouts found',
-              style: TextStyle(color: AppTheme.textLight, fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: AppTheme.textLight,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -425,12 +604,12 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
             final delay = index * 0.1;
             final start = delay.clamp(0.0, 1.0);
             final end = (delay + 0.5).clamp(0.0, 1.0);
-            
+
             final opacity = CurvedAnimation(
               parent: _listAnimationController,
               curve: Interval(start, end, curve: Curves.easeOut),
             ).value;
-            
+
             final slide = CurvedAnimation(
               parent: _listAnimationController,
               curve: Interval(start, end, curve: Curves.easeOutBack),
@@ -452,18 +631,28 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
 
   Widget _buildExerciseCard(String title) {
     final categoryImages = {
-      'arms': 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
-      'back': 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=2070',
-      'biceps': 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070',
-      'cardio': 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1974',
-      'chest': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070',
-      'glutes': 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=2070',
-      'legs': 'https://images.unsplash.com/photo-1434608519344-49d77a699e1d?q=80&w=2070',
-      'shoulder': 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
-      'triceps': 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1974',
+      'arms':
+          'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
+      'back':
+          'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=2070',
+      'biceps':
+          'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070',
+      'cardio':
+          'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1974',
+      'chest':
+          'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070',
+      'glutes':
+          'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=2070',
+      'legs':
+          'https://images.unsplash.com/photo-1434608519344-49d77a699e1d?q=80&w=2070',
+      'shoulder':
+          'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2070',
+      'triceps':
+          'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1974',
     };
 
-    final imageUrl = categoryImages[title.toLowerCase()] ??
+    final imageUrl =
+        categoryImages[title.toLowerCase()] ??
         categoryImages.values.elementAt(title.length % categoryImages.length);
 
     return Container(
@@ -496,7 +685,10 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.black.withOpacity(0.3), Colors.transparent],
+                        colors: [
+                          Colors.black.withOpacity(0.3),
+                          Colors.transparent,
+                        ],
                         stops: const [0.0, 0.4],
                       ),
                     ),
@@ -509,7 +701,10 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.9),
                             borderRadius: BorderRadius.circular(20),
@@ -530,7 +725,11 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                             color: Colors.white.withOpacity(0.9),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.bookmark_border_rounded, size: 18, color: Color(0xFF1F2937)),
+                          child: const Icon(
+                            Icons.bookmark_border_rounded,
+                            size: 18,
+                            color: Color(0xFF1F2937),
+                          ),
                         ),
                       ],
                     ),
@@ -567,7 +766,10 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                   children: [
                     _buildStat(Icons.timer_outlined, '15 min'),
                     const SizedBox(width: 20),
-                    _buildStat(Icons.local_fire_department_outlined, '120 kcal'),
+                    _buildStat(
+                      Icons.local_fire_department_outlined,
+                      '120 kcal',
+                    ),
                     const SizedBox(width: 20),
                     _buildStat(Icons.bar_chart_rounded, 'Intermediate'),
                   ],
@@ -601,11 +803,15 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                             }
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _isLocked(title) ? Colors.grey[300] : AppTheme.primary,
+                      backgroundColor: _isLocked(title)
+                          ? Colors.grey[300]
+                          : AppTheme.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -613,13 +819,18 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
                         Text(
                           _isLocked(title) ? 'LOCKED' : 'START EXERCISE',
                           style: const TextStyle(
-                            fontSize: 14, 
-                            fontWeight: FontWeight.w900, 
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
                             letterSpacing: 1.2,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Icon(_isLocked(title) ? Icons.lock_outline_rounded : Icons.play_circle_fill_rounded, size: 20),
+                        Icon(
+                          _isLocked(title)
+                              ? Icons.lock_outline_rounded
+                              : Icons.play_circle_fill_rounded,
+                          size: 20,
+                        ),
                       ],
                     ),
                   ),
@@ -639,7 +850,11 @@ class _ExerciseFetchScreenState extends State<ExerciseFetchScreen> with TickerPr
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF374151),
+          ),
         ),
       ],
     );

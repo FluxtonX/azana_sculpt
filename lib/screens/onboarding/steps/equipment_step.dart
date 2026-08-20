@@ -64,14 +64,12 @@ class EquipmentStep extends StatelessWidget {
               itemCount: equipmentOptions.length,
               itemBuilder: (context, index) {
                 final option = equipmentOptions[index];
-                final label = option['label'] as String;
-                final image = option['image'] as String?;
-                final icon = option['icon'] as IconData?;
+                final label = option['label'] ?? '';
+                final image = option['image'];
                 final isSelected = selectedEquipment.contains(label);
 
                 return GridSelectionCard(
                   imageAsset: image,
-                  icon: icon,
                   label: label,
                   isSelected: isSelected,
                   onTap: () => _toggleEquipment(label),

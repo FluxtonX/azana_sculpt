@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../constants/app_theme.dart';
 import '../../../models/user_model.dart';
 import '../../../services/database_service.dart';
 import '../../../services/auth_service.dart';
 import '../add_client_screen.dart';
+import '../assign_workout_screen.dart';
+import '../assign_meal_plan_screen.dart';
+import '../chat_screen.dart';
 
 class CoachClientsTab extends StatefulWidget {
   const CoachClientsTab({super.key});
@@ -100,7 +104,7 @@ class _CoachClientsTabState extends State<CoachClientsTab> {
 
                     return ListView.separated(
                       itemCount: filteredClients.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      separatorBuilder: (context, index) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
                         return _buildClientCard(filteredClients[index]);
                       },
@@ -199,10 +203,8 @@ class _CoachClientsTabState extends State<CoachClientsTab> {
   Widget _buildClientCard(UserModel client) {
     final name = client.fullName ?? 'No Name';
     final email = client.email;
-    final weight = '${client.weight ?? '--'} ${client.weightUnit ?? ''}';
-    final progress = '0.0'; // Placeholder for progress
+    final coachId = AuthService().currentUser?.uid ?? '';
 
-    // Get the display name for the avatar
     String avatarChar = '';
     if (name.isNotEmpty) {
       avatarChar = name[0].toUpperCase();
@@ -227,18 +229,19 @@ class _CoachClientsTabState extends State<CoachClientsTab> {
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               CircleAvatar(
-                radius: 28,
+                radius: 26,
                 backgroundColor: AppTheme.primary.withOpacity(0.1),
                 child: Text(
                   avatarChar,
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primary),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,7 +249,7 @@ class _CoachClientsTabState extends State<CoachClientsTab> {
                     Text(
                       name.isNotEmpty ? name : 'No Name',
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.textDark,
                       ),
@@ -254,73 +257,148 @@ class _CoachClientsTabState extends State<CoachClientsTab> {
                     Text(
                       email,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         color: AppTheme.textLight,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'active',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline, color: AppTheme.primary),
+                tooltip: 'Chat with Client',
+                onPressed: () {
+                  final chatId = '${client.uid}_$coachId';
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChatScreen(
+                        chatId: chatId,
+                        otherUser: client,
+                        currentUserId: coachId,
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
+          const SizedBox(height: 14),
+
+          // Assignment status stream
+          StreamBuilder<Map<String, dynamic>?>(
+            stream: DatabaseService().getClientAssignmentStream(client.uid),
+            builder: (context, snapshot) {
+              final assignedProgram = snapshot.data?['assignedProgram'] as Map<String, dynamic>?;
+              final assignedMealPlan = snapshot.data?['assignedMealPlan'] as Map<String, dynamic>?;
+
+              final programTitle = assignedProgram?['programTitle'] as String?;
+              final mealPlanTitle = assignedMealPlan?['title'] as String?;
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.divider.withOpacity(0.5)),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Current Weight',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textLight),
+                    Row(
+                      children: [
+                        const Icon(Icons.fitness_center, size: 16, color: AppTheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            programTitle != null ? 'Workout: $programTitle' : 'Workout: None Assigned',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: programTitle != null ? FontWeight.w600 : FontWeight.normal,
+                              color: programTitle != null ? AppTheme.textDark : AppTheme.textLight,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      weight,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textDark,
-                      ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.restaurant_menu, size: 16, color: AppTheme.accent),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            mealPlanTitle != null ? 'Meal: $mealPlanTitle' : 'Meal: None Assigned',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: mealPlanTitle != null ? FontWeight.w600 : FontWeight.normal,
+                              color: mealPlanTitle != null ? AppTheme.textDark : AppTheme.textLight,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 14),
+
+          // Assign action buttons
+          Row(
+            children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Progress',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textLight),
-                    ),
-                    Text(
-                      '$progress kg',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AssignWorkoutScreen(client: client),
                       ),
+                    );
+                  },
+                  icon: const Icon(Icons.fitness_center, size: 16),
+                  label: const Text('Assign Workout'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    side: const BorderSide(color: AppTheme.primary, width: 1.2),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  ],
+                    textStyle: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AssignMealPlanScreen(client: client),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.restaurant, size: 16),
+                  label: const Text('Assign Meal'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.accent,
+                    side: const BorderSide(color: AppTheme.accent, width: 1.2),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    textStyle: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -330,4 +408,5 @@ class _CoachClientsTabState extends State<CoachClientsTab> {
     );
   }
 }
+
 

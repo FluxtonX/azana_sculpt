@@ -55,14 +55,12 @@ class SupplementsGridStep extends StatelessWidget {
             itemCount: supplements.length,
             itemBuilder: (context, index) {
               final item = supplements[index];
-              final label = item['label'] as String;
-              final image = item['image'] as String?;
-              final icon = item['icon'] as IconData?;
+              final label = item['label'] ?? '';
+              final image = item['image'];
               final isSelected = selectedSupplements.contains(label);
 
               return GridSelectionCard(
                 imageAsset: image,
-                icon: icon,
                 label: label,
                 isSelected: isSelected,
                 onTap: () => _toggleSupplement(label),

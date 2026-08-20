@@ -32,12 +32,14 @@ class _StreakBannerState extends State<StreakBanner>
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
 
-    _scaleAnim = Tween<double>(begin: 1.0, end: 1.08).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    _glowAnim = Tween<double>(begin: 0.3, end: 0.7).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: 1.08,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _glowAnim = Tween<double>(
+      begin: 0.3,
+      end: 0.7,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -80,10 +82,7 @@ class _StreakBannerState extends State<StreakBanner>
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: _accentColor.withOpacity(0.25),
-          width: 1.2,
-        ),
+        border: Border.all(color: _accentColor.withOpacity(0.25), width: 1.2),
         boxShadow: [
           BoxShadow(
             color: _accentColor.withOpacity(0.08),
@@ -97,10 +96,8 @@ class _StreakBannerState extends State<StreakBanner>
           // Animated emoji
           AnimatedBuilder(
             animation: _scaleAnim,
-            builder: (_, child) => Transform.scale(
-              scale: _scaleAnim.value,
-              child: child,
-            ),
+            builder: (_, child) =>
+                Transform.scale(scale: _scaleAnim.value, child: child),
             child: Container(
               width: 46,
               height: 46,
@@ -109,10 +106,7 @@ class _StreakBannerState extends State<StreakBanner>
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Text(
-                  _streakEmoji,
-                  style: const TextStyle(fontSize: 22),
-                ),
+                child: Text(_streakEmoji, style: const TextStyle(fontSize: 22)),
               ),
             ),
           ),
@@ -148,7 +142,7 @@ class _StreakBannerState extends State<StreakBanner>
           if (widget.isAtRisk)
             AnimatedBuilder(
               animation: _glowAnim,
-              builder: (_, _unused) => Container(
+              builder: (context, child) => Container(
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
@@ -156,8 +150,9 @@ class _StreakBannerState extends State<StreakBanner>
                   color: const Color(0xFFE8714A).withOpacity(_glowAnim.value),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFE8714A)
-                          .withOpacity(_glowAnim.value * 0.5),
+                      color: const Color(
+                        0xFFE8714A,
+                      ).withOpacity(_glowAnim.value * 0.5),
                       blurRadius: 8,
                       spreadRadius: 2,
                     ),
@@ -171,10 +166,13 @@ class _StreakBannerState extends State<StreakBanner>
   }
 
   String get _streakSubtitle {
-    if (widget.streakCount >= 30) return 'You are an absolute icon. Keep going! 👑';
-    if (widget.streakCount >= 14) return 'Two weeks strong. Nothing can stop you. ⚡';
+    if (widget.streakCount >= 30)
+      return 'You are an absolute icon. Keep going! 👑';
+    if (widget.streakCount >= 14)
+      return 'Two weeks strong. Nothing can stop you. ⚡';
     if (widget.streakCount >= 7) return 'One full week. You are on fire! 🔥';
-    if (widget.streakCount >= 3) return 'The habit is forming. Keep showing up!';
+    if (widget.streakCount >= 3)
+      return 'The habit is forming. Keep showing up!';
     return 'Show up today. Your future self will thank you.';
   }
 }

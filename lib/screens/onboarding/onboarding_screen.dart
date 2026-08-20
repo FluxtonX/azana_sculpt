@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_theme.dart';
 import '../../services/database_service.dart';
 import '../../models/user_model.dart';
@@ -80,9 +81,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() => _isSaving = true);
 
     try {
+      final existingProfile = await DatabaseService().getUserProfile(user.uid);
+
       final userProfile = UserModel(
         uid: user.uid,
-        email: user.email ?? '',
+        email: user.email ?? existingProfile?.email ?? '',
+        fullName: existingProfile?.fullName,
+        phone: existingProfile?.phone,
+        isElite: existingProfile?.isElite ?? true,
+        coachId: existingProfile?.coachId,
         age: _selectedAge,
         height: _selectedHeight.toString(),
         heightUnit: _heightUnit,
@@ -101,11 +108,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         mentalBarriers: _challengeController.text,
         referral: _sourceController.text,
         socialMedia: _socialController.text,
-        role: 'client',
+        role: existingProfile?.role ?? 'client',
         updatedAt: DateTime.now(),
       );
 
       await DatabaseService().saveUserProfile(userProfile);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarding_completed_${user.uid}', true);
+      await prefs.setBool('subscription_passed_${user.uid}', true);
 
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
@@ -305,9 +316,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               child: AppButton(
                                 text: "View My Profile →",
                                 backgroundColor: Colors.white.withOpacity(0.2),
-                                onPressed: () {
-                                  Navigator.of(context).pushReplacementNamed('/home');
-                                },
+                                onPressed: _submitOnboarding,
                               ),
                             ),
                           ],

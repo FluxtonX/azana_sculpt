@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
@@ -95,6 +96,11 @@ class _SplashScreenState extends State<SplashScreen>
         }
 
         final profile = await DatabaseService().getUserProfile(user.uid);
+        final prefs = await SharedPreferences.getInstance();
+        final bool localOnboarding =
+            prefs.getBool('onboarding_completed_${user.uid}') ?? false;
+        final bool localSubscription =
+            prefs.getBool('subscription_passed_${user.uid}') ?? false;
 
         if (!mounted) return;
 
@@ -103,25 +109,25 @@ class _SplashScreenState extends State<SplashScreen>
           return;
         }
 
-        // 1. Check Subscription Status (Paywall)
-        final bool isElite = profile?.isElite ?? false;
-        if (!isElite) {
-          Navigator.of(context).pushReplacementNamed('/subscription');
-          return;
-        }
+        // 1. Check Subscription Status
+        final bool isElite = (profile?.isElite ?? false) || localSubscription;
 
         // 2. Check Onboarding Status
         final bool isOnboardingComplete =
-            profile != null && profile.height != null && profile.age != null;
+            localOnboarding ||
+            (profile != null &&
+                (profile.height != null || profile.age != null));
 
-        if (!isOnboardingComplete) {
+        if (!isElite) {
+          Navigator.of(context).pushReplacementNamed('/subscription');
+        } else if (!isOnboardingComplete) {
           Navigator.of(context).pushReplacementNamed('/onboarding');
         } else {
           Navigator.of(context).pushReplacementNamed('/home');
         }
       } catch (e) {
         debugPrint("Splash Navigation Error: $e");
-        if (mounted) Navigator.of(context).pushReplacementNamed('/onboarding');
+        if (mounted) Navigator.of(context).pushReplacementNamed('/home');
       }
     });
   }

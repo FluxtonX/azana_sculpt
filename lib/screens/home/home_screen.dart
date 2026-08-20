@@ -26,6 +26,7 @@ import '../../models/program_model.dart';
 import '../../models/workout_models.dart';
 import '../../widgets/coach_card.dart';
 import '../coaches/all_coaches_screen.dart';
+import 'client_home_tab.dart';
 import '../workouts/excercises_screen.dart';
 import '../../texting.dart';
 
@@ -206,7 +207,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return StreamBuilder<UserModel?>(
       stream: _userStream,
       builder: (context, userSnapshot) {
-        final coachId = userSnapshot.data?.coachId;
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+        }
+
+        final user = userSnapshot.data;
+        // If user is a client (or default), show the personalized ClientHomeTab
+        if (user != null && user.role != 'coach') {
+          return ClientHomeTab(user: user);
+        }
+
+        final coachId = user?.coachId;
 
         // Stabilize program stream
         if (_programStream == null || coachId != _lastCoachId) {

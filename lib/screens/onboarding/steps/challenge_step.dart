@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../constants/app_theme.dart';
 import '../widgets/step_header.dart';
 
 class ChallengeStep extends StatelessWidget {
   final TextEditingController challengeController;
 
-  const ChallengeStep({
-    super.key,
-    required this.challengeController,
-  });
+  const ChallengeStep({super.key, required this.challengeController});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +14,8 @@ class ChallengeStep extends StatelessWidget {
         children: [
           const StepHeader(
             title: "Mental hurdle or challenge facing?",
-            subtitle: "What is the biggest mental hurdle or challenge you anticipate facing when starting this new fitness program?",
+            subtitle:
+                "What is the biggest mental hurdle or challenge you anticipate facing when starting this new fitness program?",
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -27,10 +24,7 @@ class ChallengeStep extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: const Color(0xFFE5E9EF),
-                  width: 1.5,
-                ),
+                border: Border.all(color: const Color(0xFFE5E9EF), width: 1.5),
               ),
               child: TextField(
                 controller: challengeController,

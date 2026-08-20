@@ -65,7 +65,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   int _videoLoadingProgress = 0;
   String _videoLoadingStatus = 'Fetch This Video Now';
   bool _isCurrentVideoCached = false;
-  String? _videoErrorMessage;
 
   // Track download status for the list
   final Map<String, int> _downloadProgress = {};
@@ -122,7 +121,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
       _videoLoadingProgress = 0;
       _videoLoadingStatus = '';
       _isCurrentVideoCached = false;
-      _videoErrorMessage = null;
       return;
     }
 
@@ -130,7 +128,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     _videoLoadingProgress = 0;
     _videoLoadingStatus = 'Fetch This Video Now';
     _isCurrentVideoCached = false;
-    _videoErrorMessage = null;
 
     // Auto-pre-fetch next video when one starts loading
     if (_hasNextExercise) {
@@ -141,7 +138,8 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
   Future<void> _preFetchVideo(int index) async {
     if (index < 0 || index >= _exercises.length) return;
     final exercise = _exercises[index];
-    if (exercise.videoUrl == null || _cachedExerciseIds.contains(exercise.id)) return;
+    if (exercise.videoUrl == null || _cachedExerciseIds.contains(exercise.id))
+      return;
 
     try {
       await _globalCache.getOrDownloadVideo(
@@ -435,7 +433,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
     if (!mounted) return;
     setState(() {
       _isTransitioningExercise = false;
-      _videoErrorMessage = message;
       _videoLoadingStatus = message;
     });
   }
@@ -498,7 +495,9 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
       exerciseCount: _exercises.length,
       weeklyCompleted: progress.weeklyCompletedWorkouts,
       weeklyGoal: WorkoutProgressService.weeklyGoal,
-      streakDays: updatedStreak.currentStreak == 0 ? 1 : updatedStreak.currentStreak,
+      streakDays: updatedStreak.currentStreak == 0
+          ? 1
+          : updatedStreak.currentStreak,
       scoreAdded: 10,
       totalScore: progress.fitnessScore.round(),
     );
@@ -943,7 +942,9 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
                         : _surfaceStrongColor,
                     borderRadius: BorderRadius.circular(999),
                     border: isActive
-                        ? Border.all(color: AppTheme.primary.withValues(alpha: 0.5))
+                        ? Border.all(
+                            color: AppTheme.primary.withValues(alpha: 0.5),
+                          )
                         : null,
                   ),
                 ),
@@ -962,10 +963,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppTheme.primary.withValues(alpha: 0.1),
-            Colors.transparent,
-          ],
+          colors: [AppTheme.primary.withValues(alpha: 0.1), Colors.transparent],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1073,7 +1071,9 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen>
           backgroundColor: isDone ? _surfaceStrongColor : AppTheme.primary,
           foregroundColor: _textPrimary,
           padding: const EdgeInsets.symmetric(vertical: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
           elevation: 0,
         ),
         child: Row(
@@ -1367,9 +1367,8 @@ class _VideoPlayerHeroState extends State<_VideoPlayerHero> {
       await _controller!.initialize();
       if (!mounted) return;
 
-      await _controller!
-        ..setLooping(true)
-        ..play();
+      await _controller!.setLooping(true);
+      await _controller!.play();
 
       setState(() => _initialized = true);
       widget.onLoadingProgress?.call(

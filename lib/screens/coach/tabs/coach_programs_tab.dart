@@ -53,7 +53,10 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
 
                   return Text(
                     '${filteredPrograms.length} programs',
-                    style: const TextStyle(fontSize: 14, color: AppTheme.textLight),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textLight,
+                    ),
                   );
                 },
               ),
@@ -69,7 +72,8 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
                     if (snapshot.hasError) {
                       String errorMessage = snapshot.error.toString();
                       if (errorMessage.contains('permission-denied')) {
-                        errorMessage = 'Permission Denied: Please update your Firestore security rules to allow programs access.';
+                        errorMessage =
+                            'Permission Denied: Please update your Firestore security rules to allow programs access.';
                       }
                       return Center(
                         child: Padding(
@@ -77,7 +81,10 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
                           child: Text(
                             errorMessage,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       );
@@ -95,11 +102,21 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.assignment_outlined, size: 64, color: AppTheme.textLight.withOpacity(0.5)),
+                            Icon(
+                              Icons.assignment_outlined,
+                              size: 64,
+                              color: AppTheme.textLight.withOpacity(0.5),
+                            ),
                             const SizedBox(height: 16),
                             Text(
-                              _searchQuery.isEmpty ? 'No programs yet' : 'No results found',
-                              style: const TextStyle(fontSize: 18, color: AppTheme.textLight, fontWeight: FontWeight.bold),
+                              _searchQuery.isEmpty
+                                  ? 'No programs yet'
+                                  : 'No results found',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                color: AppTheme.textLight,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -107,7 +124,10 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
                                   ? 'Create your first training program'
                                   : 'Try searching with a different title or description',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 14, color: AppTheme.textLight),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.textLight,
+                              ),
                             ),
                           ],
                         ),
@@ -116,9 +136,13 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
 
                     return ListView.separated(
                       itemCount: filteredPrograms.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 16),
                       itemBuilder: (context, index) {
-                        return _buildProgramCard(context, filteredPrograms[index]);
+                        return _buildProgramCard(
+                          context,
+                          filteredPrograms[index],
+                        );
                       },
                     );
                   },
@@ -148,7 +172,11 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
                     shape: BoxShape.circle,
                     border: Border.all(color: AppTheme.divider),
                   ),
-                  child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppTheme.textDark),
+                  child: const Icon(
+                    Icons.arrow_back_rounded,
+                    size: 20,
+                    color: AppTheme.textDark,
+                  ),
                 ),
               ),
             const Text(
@@ -165,7 +193,9 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const CreateProgramScreen()),
+              MaterialPageRoute(
+                builder: (context) => const CreateProgramScreen(),
+              ),
             );
           },
           icon: const Icon(Icons.add, size: 18),
@@ -174,8 +204,13 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
             backgroundColor: AppTheme.primary,
             foregroundColor: AppTheme.textOnDark,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],
@@ -232,7 +267,8 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: (program.status == 'active' ? Colors.green : Colors.grey).withOpacity(0.1),
+              color: (program.status == 'active' ? Colors.green : Colors.grey)
+                  .withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -256,7 +292,11 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
           const SizedBox(height: 8),
           Text(
             program.description,
-            style: const TextStyle(fontSize: 14, color: AppTheme.textLight, height: 1.4),
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.textLight,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -272,7 +312,8 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ManageProgramWorkoutsScreen(program: program),
+                        builder: (context) =>
+                            ManageProgramWorkoutsScreen(program: program),
                       ),
                     );
                   },
@@ -284,8 +325,13 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
                     elevation: 0,
                     side: const BorderSide(color: AppTheme.divider),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -300,10 +346,21 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Delete Program'),
-                      content: const Text('Are you sure you want to delete this program?'),
+                      content: const Text(
+                        'Are you sure you want to delete this program?',
+                      ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text(
+                            'Delete',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -335,4 +392,3 @@ class _CoachProgramsTabState extends State<CoachProgramsTab> {
     );
   }
 }
-

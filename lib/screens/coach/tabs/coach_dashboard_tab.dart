@@ -31,7 +31,7 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
   Future<void> _loadLocalImage() async {
     final uid = AuthService().currentUser?.uid;
     if (uid == null) return;
-    
+
     final prefs = await SharedPreferences.getInstance();
     final imagePath = prefs.getString('coach_profile_image_$uid');
     if (imagePath != null && File(imagePath).existsSync()) {
@@ -46,7 +46,7 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
     final String coachId = AuthService().currentUser?.uid ?? '';
 
     return Scaffold(
-      backgroundColor: AppTheme.surface, 
+      backgroundColor: AppTheme.surface,
       body: RefreshIndicator(
         onRefresh: _loadLocalImage,
         child: SingleChildScrollView(
@@ -57,15 +57,15 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
               // ── [1] Gradient Header + Stat Cards ──
               _buildHeaderWithStats(context, coachId),
               const SizedBox(height: 80),
-      
+
               // ── [2] Quick Actions ──
               _buildQuickActions(),
               const SizedBox(height: 32),
-      
+
               // ── [3] Recent Client Activity ──
               _buildRecentClientActivity(),
               const SizedBox(height: 32),
-      
+
               // ── [4] This Week's Schedule ──
               _buildThisWeekSchedule(),
               const SizedBox(height: 120),
@@ -84,8 +84,9 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
       stream: DatabaseService().userProfileStream(coachId),
       builder: (context, snapshot) {
         final coach = snapshot.data;
-        final String displayName = (coach?.fullName ?? 'Coach').split(' ').first;
-        final avatarUrl = 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(coach?.fullName ?? 'Coach')}&background=random&color=fff';
+        final String displayName = (coach?.fullName ?? 'Coach')
+            .split(' ')
+            .first;
 
         return Stack(
           clipBehavior: Clip.none,
@@ -143,24 +144,36 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.5),
+                            width: 1.5,
+                          ),
                         ),
                         child: Container(
                           width: 52,
                           height: 52,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.white24,
                             shape: BoxShape.circle,
                           ),
-                          child: Center(
-                            child: Text(
-                              displayName[0].toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                              ),
-                            ),
+                          child: ClipOval(
+                            child: _localImageFile != null
+                                ? Image.file(
+                                    _localImageFile!,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Center(
+                                    child: Text(
+                                      displayName.isNotEmpty
+                                          ? displayName[0].toUpperCase()
+                                          : 'C',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
@@ -188,13 +201,15 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
                           Icons.people_outline_rounded,
                           AppTheme.primary,
                         );
-                      }
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: StreamBuilder<int>(
-                      stream: DatabaseService().getUnreadMessagesCountStream(coachId),
+                      stream: DatabaseService().getUnreadMessagesCountStream(
+                        coachId,
+                      ),
                       builder: (context, snapshot) {
                         final count = snapshot.data ?? 0;
                         return _statCard(
@@ -204,7 +219,7 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
                           const Color(0xFF4CAF50),
                           badgeCount: count,
                         );
-                      }
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -219,7 +234,7 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
                           Icons.assignment_outlined,
                           const Color(0xFFF5A623),
                         );
-                      }
+                      },
                     ),
                   ),
                 ],
@@ -227,11 +242,17 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
             ),
           ],
         );
-      }
+      },
     );
   }
 
-  Widget _statCard(String value, String label, IconData icon, Color color, {int badgeCount = 0}) {
+  Widget _statCard(
+    String value,
+    String label,
+    IconData icon,
+    Color color, {
+    int badgeCount = 0,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
@@ -292,7 +313,9 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: badgeCount > 0 ? const Color(0xFFFF4B4B) : AppTheme.textDark,
+              color: badgeCount > 0
+                  ? const Color(0xFFFF4B4B)
+                  : AppTheme.textDark,
             ),
           ),
           const SizedBox(height: 2),
@@ -345,21 +368,33 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
             Row(
               children: [
                 Expanded(
-                  child: _actionCardText('+', 'Add Client', onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AddClientScreen()),
-                    );
-                  }),
+                  child: _actionCardText(
+                    '+',
+                    'Add Client',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddClientScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _actionCardText('+', 'Create Program', onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CreateProgramScreen()),
-                    );
-                  }),
+                  child: _actionCardText(
+                    '+',
+                    'Create Program',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CreateProgramScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -373,7 +408,10 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const CoachMessagesTab(showBackButton: true)),
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const CoachMessagesTab(showBackButton: true),
+                        ),
                       );
                     },
                   ),
@@ -386,7 +424,10 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const CoachProgramsTab(showBackButton: true)),
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const CoachProgramsTab(showBackButton: true),
+                        ),
                       );
                     },
                   ),
@@ -403,7 +444,9 @@ class _CoachDashboardTabState extends State<CoachDashboardTab> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const PaymentRequestsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const PaymentRequestsScreen(),
+                        ),
                       );
                     },
                   ),

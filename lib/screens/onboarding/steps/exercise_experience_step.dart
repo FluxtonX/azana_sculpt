@@ -43,14 +43,12 @@ class ExerciseExperienceStep extends StatelessWidget {
               itemCount: levels.length,
               itemBuilder: (context, index) {
                 final level = levels[index];
-                final label = level['label'] as String;
-                final image = level['image'] as String?;
-                final icon = level['icon'] as IconData?;
+                final label = level['label'] ?? '';
+                final image = level['image'];
                 final isSelected = selectedExperience == label;
 
                 return GridSelectionCard(
                   imageAsset: image,
-                  icon: icon,
                   label: label,
                   isSelected: isSelected,
                   onTap: () => onExperienceChanged(label),

@@ -439,8 +439,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _unlockedBadges.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, i) {
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              itemBuilder: (context, i) {
                 final badge = _unlockedBadges[i];
                 return Tooltip(
                   message: badge.title,
@@ -510,11 +510,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           StreamBuilder<int>(
             stream: (user?.role == 'coach')
-                ? DatabaseService().getUnreadMessagesCountStream(user!.uid)
-                : (user?.coachId != null)
+                ? DatabaseService().getUnreadMessagesCountStream(user?.uid ?? '')
+                : (user?.coachId != null && user!.coachId!.isNotEmpty)
                 ? DatabaseService().getChatUnreadCountStream(
-                    '${user!.uid}_${user!.coachId}',
-                    user!.uid,
+                    '${user.uid}_${user.coachId}',
+                    user.uid,
                   )
                 : Stream.value(0),
             builder: (context, snapshot) {

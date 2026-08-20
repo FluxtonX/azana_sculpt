@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ─── Users Collection ──────────────────────────────────────────────
+    // Authenticated users can read user docs:
+    // - Needed for querying coaches (where role == 'coach')
+    // - Needed for coaches querying their clients (where coachId == coachId)
+    // - Needed for chat user details and email search
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isAuthenticated();
+      allow delete: if isOwner(userId);
+    }
+
+    // ─── Programs & Workouts Collection ────────────────────────────────
+    match /programs/{programId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
+
+      match /workouts/{workoutId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // ─── Meal Plans Collection ─────────────────────────────────────────
+    match /meal_plans/{mealPlanId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated();
+    }
+
+    // ─── Completed Workouts Collection ─────────────────────────────────
+    match /completed_workouts/{completionId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // ─── Chats & Messages Collection ───────────────────────────────────
+    match /chats/{chatId} {
+      allow read, write: if isAuthenticated();
+
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // ─── Payment Requests Collection ───────────────────────────────────
+    match /payment_requests/{uid} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

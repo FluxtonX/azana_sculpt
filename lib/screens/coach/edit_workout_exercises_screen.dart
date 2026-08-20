@@ -15,10 +15,12 @@ class EditWorkoutExercisesScreen extends StatefulWidget {
   });
 
   @override
-  State<EditWorkoutExercisesScreen> createState() => _EditWorkoutExercisesScreenState();
+  State<EditWorkoutExercisesScreen> createState() =>
+      _EditWorkoutExercisesScreenState();
 }
 
-class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen> {
+class _EditWorkoutExercisesScreenState
+    extends State<EditWorkoutExercisesScreen> {
   late List<ExerciseModel> _exercises;
   final _dbService = DatabaseService();
   bool _isSaving = false;
@@ -37,7 +39,9 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Unsaved Changes'),
-        content: const Text('You have unsaved changes. Do you want to discard them?'),
+        content: const Text(
+          'You have unsaved changes. Do you want to discard them?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -79,8 +83,13 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
     }
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {int maxLines = 1, TextInputType? keyboardType, String? hint}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? hint,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -104,7 +113,10 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
             hintStyle: const TextStyle(color: AppTheme.textLight, fontSize: 13),
             filled: true,
             fillColor: AppTheme.surfaceCard,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
         ),
       ],
@@ -155,17 +167,38 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                 ],
               ),
               const SizedBox(height: 24),
-              _buildTextField('Exercise Name', nameController, hint: 'e.g. Bulgarian Split Squat'),
+              _buildTextField(
+                'Exercise Name',
+                nameController,
+                hint: 'e.g. Bulgarian Split Squat',
+              ),
               const SizedBox(height: 20),
-              _buildTextField('Instructions', instructionController, maxLines: 3, hint: 'e.g. Keep your chest up and core engaged...'),
+              _buildTextField(
+                'Instructions',
+                instructionController,
+                maxLines: 3,
+                hint: 'e.g. Keep your chest up and core engaged...',
+              ),
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _buildTextField('Sets', setsController, keyboardType: TextInputType.number)),
+                  Expanded(
+                    child: _buildTextField(
+                      'Sets',
+                      setsController,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(child: _buildTextField('Reps/Time', repsController)),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildTextField('Rest (s)', restController, keyboardType: TextInputType.number)),
+                  Expanded(
+                    child: _buildTextField(
+                      'Rest (s)',
+                      restController,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 32),
@@ -173,14 +206,16 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                 onTap: () {
                   if (nameController.text.isNotEmpty) {
                     setState(() {
-                      _exercises.add(ExerciseModel(
-                        id: const Uuid().v4(),
-                        name: nameController.text.trim(),
-                        instruction: instructionController.text.trim(),
-                        sets: int.tryParse(setsController.text) ?? 3,
-                        reps: repsController.text.trim(),
-                        restSeconds: int.tryParse(restController.text) ?? 60,
-                      ));
+                      _exercises.add(
+                        ExerciseModel(
+                          id: const Uuid().v4(),
+                          name: nameController.text.trim(),
+                          instruction: instructionController.text.trim(),
+                          sets: int.tryParse(setsController.text) ?? 3,
+                          reps: repsController.text.trim(),
+                          restSeconds: int.tryParse(restController.text) ?? 60,
+                        ),
+                      );
                       _hasUnsavedChanges = true;
                     });
                     Navigator.pop(context);
@@ -217,11 +252,11 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
   Widget build(BuildContext context) {
     return PopScope(
       canPop: !_hasUnsavedChanges,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final shouldPop = await _onWillPop();
-        if (shouldPop && mounted) {
-          Navigator.pop(context);
+        if (shouldPop && context.mounted) {
+          Navigator.of(context).pop();
         }
       },
       child: Scaffold(
@@ -255,15 +290,18 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
             icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
             onPressed: () async {
               final shouldPop = await _onWillPop();
-              if (shouldPop && mounted) {
-                Navigator.pop(context);
+              if (shouldPop && context.mounted) {
+                Navigator.of(context).pop();
               }
             },
           ),
           actions: [
             if (!_hasUnsavedChanges)
               IconButton(
-                icon: const Icon(Icons.check_circle_outline_rounded, color: AppTheme.primary),
+                icon: const Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: AppTheme.primary,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
           ],
@@ -284,8 +322,11 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                                 color: AppTheme.accent.withOpacity(0.05),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.format_list_bulleted_rounded,
-                                  size: 64, color: AppTheme.accent.withOpacity(0.5)),
+                              child: Icon(
+                                Icons.format_list_bulleted_rounded,
+                                size: 64,
+                                color: AppTheme.accent.withOpacity(0.5),
+                              ),
                             ),
                             const SizedBox(height: 24),
                             const Text(
@@ -300,7 +341,10 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                             const Text(
                               'Define the routine for this workout session.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: AppTheme.textLight, fontSize: 14),
+                              style: TextStyle(
+                                color: AppTheme.textLight,
+                                fontSize: 14,
+                              ),
                             ),
                             const SizedBox(height: 32),
                             ElevatedButton.icon(
@@ -309,7 +353,10 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                               label: const Text('Add First Exercise'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.accent,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
+                                ),
                               ),
                             ),
                           ],
@@ -317,7 +364,10 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                       ),
                     )
                   : ReorderableListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       itemCount: _exercises.length,
                       onReorder: (oldIndex, newIndex) {
                         setState(() {
@@ -342,14 +392,16 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                                 offset: const Offset(0, 4),
                               ),
                             ],
-                            border: Border.all(color: AppTheme.divider.withOpacity(0.3)),
+                            border: Border.all(
+                              color: AppTheme.divider.withOpacity(0.3),
+                            ),
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(20),
                             child: Theme(
-                              data: Theme.of(context).copyWith(
-                                canvasColor: Colors.transparent,
-                              ),
+                              data: Theme.of(
+                                context,
+                              ).copyWith(canvasColor: Colors.transparent),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.all(20),
                                 leading: Container(
@@ -388,7 +440,10 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                                     ),
                                   ),
                                 ),
-                                trailing: const Icon(Icons.drag_indicator_rounded, color: AppTheme.textLight),
+                                trailing: const Icon(
+                                  Icons.drag_indicator_rounded,
+                                  color: AppTheme.textLight,
+                                ),
                                 onLongPress: () {
                                   setState(() {
                                     _exercises.removeAt(index);
@@ -407,7 +462,13 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, -4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
                 ),
                 child: SizedBox(
                   width: double.infinity,
@@ -417,21 +478,28 @@ class _EditWorkoutExercisesScreenState extends State<EditWorkoutExercisesScreen>
                       backgroundColor: AppTheme.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: _isSaving 
-                      ? const CircularProgressIndicator(color: Colors.white) 
-                      : const Text('SAVE ALL CHANGES', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: _isSaving
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'SAVE ALL CHANGES',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                   ),
                 ),
               ),
           ],
         ),
-        floatingActionButton: _hasUnsavedChanges ? null : FloatingActionButton(
-          onPressed: _addExercise,
-          backgroundColor: AppTheme.primary,
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
+        floatingActionButton: _hasUnsavedChanges
+            ? null
+            : FloatingActionButton(
+                onPressed: _addExercise,
+                backgroundColor: AppTheme.primary,
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
       ),
     );
   }

@@ -23,10 +23,10 @@ class DatabaseService {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => MessageModel.fromMap(doc.data()))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => MessageModel.fromMap(doc.data()))
+              .toList();
+        });
   }
 
   Stream<int> getUnreadMessagesCountStream(String userId) {
@@ -37,7 +37,10 @@ class DatabaseService {
 
     void updateSum() {
       if (controller != null && !controller.isClosed) {
-        final total = clientCounts.values.fold(0, (sum, count) => sum + count);
+        final total = clientCounts.values.fold(
+          0,
+          (runningSum, element) => runningSum + element,
+        );
         controller.add(total);
       }
     }
@@ -65,8 +68,10 @@ class DatabaseService {
           // Set up new subs for each client
           for (var client in clients) {
             final chatId = '${client.uid}_$userId';
-            final sub = getChatUnreadCountStream(chatId, userId).listen((count) {
-              clientCounts[client.uid] = count;
+            final sub = getChatUnreadCountStream(chatId, userId).listen((
+              unread,
+            ) {
+              clientCounts[client.uid] = unread;
               updateSum();
             });
             subs.add(sub);
@@ -134,10 +139,12 @@ class DatabaseService {
   // Create or Update User Profile
   Future<void> saveUserProfile(UserModel user) async {
     try {
-      await _db.collection('users').doc(user.uid).set(
-            user.toMap(),
-            SetOptions(merge: true),
-          );
+      final map = user.toMap();
+      map.removeWhere((key, value) => value == null);
+      await _db
+          .collection('users')
+          .doc(user.uid)
+          .set(map, SetOptions(merge: true));
     } catch (e) {
       debugPrint('Error saving user profile: $e');
       rethrow;
@@ -188,16 +195,16 @@ class DatabaseService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data()))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => ProgramModel.fromMap(doc.data()))
+              .toList();
+        });
   }
 
   // Delete Program
   Future<void> deleteProgram(String programId) async {
     try {
-      // Note: In a real app, you might want to delete sub-collections too, 
+      // Note: In a real app, you might want to delete sub-collections too,
       // but Firestore doesn't do this automatically. For now, we delete the doc.
       await _db.collection('programs').doc(programId).delete();
     } catch (e) {
@@ -209,7 +216,10 @@ class DatabaseService {
   // --- Workouts & Exercises ---
 
   // Add Workout to Program
-  Future<void> addWorkoutToProgram(String programId, WorkoutSession session) async {
+  Future<void> addWorkoutToProgram(
+    String programId,
+    WorkoutSession session,
+  ) async {
     try {
       await _db
           .collection('programs')
@@ -232,10 +242,10 @@ class DatabaseService {
         .orderBy('orderIndex', descending: false)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => WorkoutSession.fromMap(doc.data()))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => WorkoutSession.fromMap(doc.data()))
+              .toList();
+        });
   }
 
   // Get the first workout session for a program
@@ -247,25 +257,26 @@ class DatabaseService {
         .limit(1)
         .snapshots()
         .map((snapshot) {
-      if (snapshot.docs.isNotEmpty) {
-        return WorkoutSession.fromMap(snapshot.docs.first.data());
-      }
-      return null;
-    });
+          if (snapshot.docs.isNotEmpty) {
+            return WorkoutSession.fromMap(snapshot.docs.first.data());
+          }
+          return null;
+        });
   }
 
   // Update Exercises in a Workout
   Future<void> updateWorkoutExercises(
-      String programId, String workoutId, List<ExerciseModel> exercises) async {
+    String programId,
+    String workoutId,
+    List<ExerciseModel> exercises,
+  ) async {
     try {
       await _db
           .collection('programs')
           .doc(programId)
           .collection('workouts')
           .doc(workoutId)
-          .update({
-        'exercises': exercises.map((e) => e.toMap()).toList(),
-      });
+          .update({'exercises': exercises.map((e) => e.toMap()).toList()});
     } catch (e) {
       debugPrint('Error updating exercises: $e');
       rethrow;
@@ -291,16 +302,16 @@ class DatabaseService {
   Stream<List<ProgramModel>> getAllProgramsStream({String? coachId}) {
     // Simplified query to avoid index errors during development
     Query query = _db.collection('programs');
-    
+
     if (coachId != null && coachId.isNotEmpty) {
       query = query.where('coachId', isEqualTo: coachId);
     }
-    
-    return query
-        .snapshots()
-        .map((snapshot) {
+
+    return query.snapshots().map((snapshot) {
       return snapshot.docs
-          .map((doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>))
+          .map(
+            (doc) => ProgramModel.fromMap(doc.data() as Map<String, dynamic>),
+          )
           .toList();
     });
   }
@@ -347,8 +358,10 @@ class DatabaseService {
         .where('role', isEqualTo: 'client')
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => UserModel.fromMap(doc.data())).toList();
-    });
+          return snapshot.docs
+              .map((doc) => UserModel.fromMap(doc.data()))
+              .toList();
+        });
   }
 
   // --- Workout Progress & Completion ---
@@ -364,8 +377,11 @@ class DatabaseService {
     required int calories,
   }) async {
     try {
-      debugPrint('DEBUG: Attempting to complete workout: $workoutId in program: $programId');
-      final completionId = '${userId}_${workoutId}_${DateTime.now().millisecondsSinceEpoch}';
+      debugPrint(
+        'DEBUG: Attempting to complete workout: $workoutId in program: $programId',
+      );
+      final completionId =
+          '${userId}_${workoutId}_${DateTime.now().millisecondsSinceEpoch}';
       await _db.collection('completed_workouts').doc(completionId).set({
         'userId': userId,
         'programId': programId,
@@ -376,9 +392,9 @@ class DatabaseService {
         'calories': calories,
         'completedAt': DateTime.now().toIso8601String(),
       });
-      
+
       debugPrint('DEBUG: Workout completion saved successfully: $completionId');
-      
+
       // Update user streak and last active date
       await StreakService().updateStreak(userId);
     } catch (e) {
@@ -395,47 +411,50 @@ class DatabaseService {
         // Note: Filter by programId in Dart to avoid complex composite index requirement
         .snapshots()
         .asyncMap((completedSnapshot) async {
-      // Filter by programId in memory
-      final relevantCompletions = completedSnapshot.docs
-          .where((doc) => doc.data()['programId'] == programId);
+          // Filter by programId in memory
+          final relevantCompletions = completedSnapshot.docs.where(
+            (doc) => doc.data()['programId'] == programId,
+          );
 
-      // Get total workouts in this program
-      final workoutsSnapshot = await _db
-          .collection('programs')
-          .doc(programId)
-          .collection('workouts')
-          .get();
-      
-      final totalWorkouts = workoutsSnapshot.docs.length;
-      if (totalWorkouts == 0) return 0.0;
+          // Get total workouts in this program
+          final workoutsSnapshot = await _db
+              .collection('programs')
+              .doc(programId)
+              .collection('workouts')
+              .get();
 
-      // Count unique workouts completed for this specific program
-      final completedWorkoutIds = relevantCompletions
-          .map((doc) => doc.data()['workoutId'] as String)
-          .toSet();
-          
-      return (completedWorkoutIds.length / totalWorkouts).clamp(0.0, 1.0);
-    });
+          final totalWorkouts = workoutsSnapshot.docs.length;
+          if (totalWorkouts == 0) return 0.0;
+
+          // Count unique workouts completed for this specific program
+          final completedWorkoutIds = relevantCompletions
+              .map((doc) => doc.data()['workoutId'] as String)
+              .toSet();
+
+          return (completedWorkoutIds.length / totalWorkouts).clamp(0.0, 1.0);
+        });
   }
 
   // Get recently completed workouts
-  Stream<List<Map<String, dynamic>>> getLatestCompletedWorkoutsStream(String userId) {
+  Stream<List<Map<String, dynamic>>> getLatestCompletedWorkoutsStream(
+    String userId,
+  ) {
     return _db
         .collection('completed_workouts')
         .where('userId', isEqualTo: userId)
         // Removed orderBy to avoid index errors; sorting in Dart below
         .snapshots()
         .map((snapshot) {
-      final docs = snapshot.docs.map((doc) => doc.data()).toList();
-      // Sort by completedAt descending
-      docs.sort((a, b) {
-        final dateA = a['completedAt'] as String? ?? '';
-        final dateB = b['completedAt'] as String? ?? '';
-        return dateB.compareTo(dateA);
-      });
-      // Limit to 5
-      return docs.take(5).toList();
-    });
+          final docs = snapshot.docs.map((doc) => doc.data()).toList();
+          // Sort by completedAt descending
+          docs.sort((a, b) {
+            final dateA = a['completedAt'] as String? ?? '';
+            final dateB = b['completedAt'] as String? ?? '';
+            return dateB.compareTo(dateA);
+          });
+          // Limit to 5
+          return docs.take(5).toList();
+        });
   }
 
   // --- Coaches ---
@@ -447,27 +466,35 @@ class DatabaseService {
         .where('role', isEqualTo: 'coach')
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => UserModel.fromMap(doc.data())).toList();
-    });
+          return snapshot.docs
+              .map((doc) => UserModel.fromMap(doc.data()))
+              .toList();
+        });
   }
 
   // Get stream of completed workout IDs for a program
-  Stream<Set<String>> getCompletedWorkoutIdsStream(String userId, String programId) {
+  Stream<Set<String>> getCompletedWorkoutIdsStream(
+    String userId,
+    String programId,
+  ) {
     return _db
         .collection('completed_workouts')
         .where('userId', isEqualTo: userId)
         .snapshots()
         .map((snapshot) {
-      // Filter by programId in memory to avoid index issues
-      return snapshot.docs
-          .where((doc) => doc.data()['programId'] == programId)
-          .map((doc) => doc.data()['workoutId'] as String)
-          .toSet();
-    });
+          // Filter by programId in memory to avoid index issues
+          return snapshot.docs
+              .where((doc) => doc.data()['programId'] == programId)
+              .map((doc) => doc.data()['workoutId'] as String)
+              .toSet();
+        });
   }
 
   // Get the NEXT available workout session in a program (the first one not completed)
-  Stream<WorkoutSession?> getNextWorkoutStream(String userId, String programId) {
+  Stream<WorkoutSession?> getNextWorkoutStream(
+    String userId,
+    String programId,
+  ) {
     // 1. Get all workouts in program order
     return getWorkoutsStream(programId).asyncMap((workouts) async {
       if (workouts.isEmpty) return null;
@@ -501,7 +528,10 @@ class DatabaseService {
     return getAllProgramsStream(coachId: coachId).asyncMap((programs) async {
       for (var program in programs) {
         // Check progress of each program
-        final progress = await getProgramProgressStream(userId, program.id).first;
+        final progress = await getProgramProgressStream(
+          userId,
+          program.id,
+        ).first;
         if (progress < 1.0) {
           return program; // Found the active one!
         }
@@ -510,6 +540,7 @@ class DatabaseService {
       return programs.isNotEmpty ? programs.first : null;
     });
   }
+
   // Update User Elite Status
   Future<void> updateUserEliteStatus(String uid, bool isElite) async {
     try {
@@ -546,7 +577,9 @@ class DatabaseService {
   }
 
   // Get Stream of pending payment requests for a specific coach
-  Stream<List<Map<String, dynamic>>> getPendingPaymentRequestsStream(String coachEmail) {
+  Stream<List<Map<String, dynamic>>> getPendingPaymentRequestsStream(
+    String coachEmail,
+  ) {
     return _db
         .collection('payment_requests')
         .where('status', isEqualTo: 'pending')
@@ -556,8 +589,10 @@ class DatabaseService {
           final docs = snapshot.docs.map((doc) => doc.data()).toList();
           // Sort in memory to avoid needing a Firestore index
           docs.sort((a, b) {
-            final aTime = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-            final bTime = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final aTime =
+                (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final bTime =
+                (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
             return bTime.compareTo(aTime);
           });
           return docs;
@@ -583,5 +618,129 @@ class DatabaseService {
       debugPrint('Error updating payment request: $e');
       rethrow;
     }
+  }
+
+  // ─── Client Assignment ───────────────────────────────────────────────────
+
+  /// Coach assigns a program (+ optional start date) to a client.
+  /// Each workout in the program is unlocked one day at a time from [startDate].
+  Future<void> assignProgramToClient({
+    required String clientUid,
+    required String programId,
+    required String programTitle,
+    required DateTime startDate,
+    String? note,
+  }) async {
+    try {
+      await _db.collection('users').doc(clientUid).update({
+        'assignedProgram': {
+          'programId': programId,
+          'programTitle': programTitle,
+          'startDate': startDate.toIso8601String(),
+          'note': note ?? '',
+          'assignedAt': DateTime.now().toIso8601String(),
+        },
+      });
+    } catch (e) {
+      debugPrint('Error assigning program to client: $e');
+      rethrow;
+    }
+  }
+
+  /// Coach assigns a meal plan PDF URL to a client.
+  Future<void> assignMealPlanToClient({
+    required String clientUid,
+    required String mealPlanTitle,
+    required String pdfUrl,
+    String? note,
+  }) async {
+    try {
+      await _db.collection('users').doc(clientUid).update({
+        'assignedMealPlan': {
+          'title': mealPlanTitle,
+          'pdfUrl': pdfUrl,
+          'note': note ?? '',
+          'assignedAt': DateTime.now().toIso8601String(),
+        },
+      });
+    } catch (e) {
+      debugPrint('Error assigning meal plan to client: $e');
+      rethrow;
+    }
+  }
+
+  /// Stream of a client's assignment data (assigned program + meal plan).
+  Stream<Map<String, dynamic>?> getClientAssignmentStream(String clientUid) {
+    return _db.collection('users').doc(clientUid).snapshots().map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      final data = doc.data()!;
+      return {
+        'assignedProgram': data['assignedProgram'],
+        'assignedMealPlan': data['assignedMealPlan'],
+      };
+    });
+  }
+
+  /// Get workouts for an assigned program, annotated with unlock status.
+  /// Day 1 workout = startDate, Day 2 = startDate+1, etc.
+  Stream<List<Map<String, dynamic>>> getAssignedWorkoutsWithLockStatus({
+    required String programId,
+    required DateTime startDate,
+  }) {
+    return getWorkoutsStream(programId).map((workouts) {
+      final today = DateTime.now();
+      return workouts.asMap().entries.map((entry) {
+        final index = entry.key;
+        final workout = entry.value;
+        final unlockDate = startDate.add(Duration(days: index));
+        final isUnlocked = !today.isBefore(
+          DateTime(unlockDate.year, unlockDate.month, unlockDate.day),
+        );
+        final isToday =
+            today.year == unlockDate.year &&
+            today.month == unlockDate.month &&
+            today.day == unlockDate.day;
+        return {
+          'workout': workout,
+          'unlockDate': unlockDate,
+          'isUnlocked': isUnlocked,
+          'isToday': isToday,
+          'dayNumber': index + 1,
+        };
+      }).toList();
+    });
+  }
+
+  /// Save a meal plan PDF reference to Firestore (coach's collection).
+  Future<String> saveMealPlanToFirestore({
+    required String coachId,
+    required String title,
+    required String pdfUrl,
+  }) async {
+    try {
+      final docRef = _db.collection('meal_plans').doc();
+      await docRef.set({
+        'id': docRef.id,
+        'coachId': coachId,
+        'title': title,
+        'pdfUrl': pdfUrl,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return docRef.id;
+    } catch (e) {
+      debugPrint('Error saving meal plan: $e');
+      rethrow;
+    }
+  }
+
+  /// Stream of all meal plans created by a coach.
+  Stream<List<Map<String, dynamic>>> getCoachMealPlansStream(String coachId) {
+    return _db
+        .collection('meal_plans')
+        .where('coachId', isEqualTo: coachId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) => doc.data()).toList();
+        });
   }
 }

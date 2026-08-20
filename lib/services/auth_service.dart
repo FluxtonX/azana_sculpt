@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
@@ -10,7 +11,7 @@ class AuthService {
       await GoogleSignIn().signOut();
       await _auth.signOut();
     } catch (e) {
-      print('Sign out error: $e');
+      debugPrint('Sign out error: $e');
     }
   }
 
@@ -20,7 +21,8 @@ class AuthService {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return null;
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -33,7 +35,6 @@ class AuthService {
       throw e.toString();
     }
   }
-
 
   // Sign In with Email/Password
   Future<UserCredential?> signIn(String email, String password) async {
@@ -53,10 +54,8 @@ class AuthService {
   // Sign Up with Email/Password
   Future<UserCredential?> signUp(String email, String password) async {
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
       return userCredential;
     } on FirebaseAuthException catch (e) {
       throw e.message ?? 'An unknown error occurred';

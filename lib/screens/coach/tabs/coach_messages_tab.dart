@@ -48,7 +48,11 @@ class _CoachMessagesTabState extends State<CoachMessagesTab> {
                           shape: BoxShape.circle,
                           border: Border.all(color: AppTheme.divider),
                         ),
-                        child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppTheme.textDark),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          size: 20,
+                          color: AppTheme.textDark,
+                        ),
                       ),
                     ),
                   const Text(
@@ -76,7 +80,10 @@ class _CoachMessagesTabState extends State<CoachMessagesTab> {
 
                   return Text(
                     '${filteredClients.length} conversations',
-                    style: const TextStyle(fontSize: 14, color: AppTheme.textLight),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textLight,
+                    ),
                   );
                 },
               ),
@@ -106,9 +113,14 @@ class _CoachMessagesTabState extends State<CoachMessagesTab> {
 
                     return ListView.separated(
                       itemCount: filteredClients.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
                       itemBuilder: (context, index) {
-                        return _buildClientTile(context, filteredClients[index], coachId);
+                        return _buildClientTile(
+                          context,
+                          filteredClients[index],
+                          coachId,
+                        );
                       },
                     );
                   },
@@ -171,7 +183,9 @@ class _CoachMessagesTabState extends State<CoachMessagesTab> {
             ),
             const SizedBox(height: 24),
             Text(
-              _searchQuery.isEmpty ? 'No conversations yet' : 'No results found',
+              _searchQuery.isEmpty
+                  ? 'No conversations yet'
+                  : 'No results found',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -183,10 +197,7 @@ class _CoachMessagesTabState extends State<CoachMessagesTab> {
               _searchQuery.isEmpty
                   ? 'Start messaging your clients'
                   : 'Try searching for another name or email',
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textLight,
-              ),
+              style: const TextStyle(fontSize: 14, color: AppTheme.textLight),
             ),
           ],
         ),
@@ -194,7 +205,11 @@ class _CoachMessagesTabState extends State<CoachMessagesTab> {
     );
   }
 
-  Widget _buildClientTile(BuildContext context, UserModel client, String coachId) {
+  Widget _buildClientTile(
+    BuildContext context,
+    UserModel client,
+    String coachId,
+  ) {
     // Unique chat ID is a combination of client and coach IDs
     final String chatId = '${client.uid}_$coachId';
 
@@ -223,7 +238,7 @@ class _CoachMessagesTabState extends State<CoachMessagesTab> {
           stream: DatabaseService().getChatUnreadCountStream(chatId, coachId),
           builder: (context, snapshot) {
             final unreadCount = snapshot.data ?? 0;
-            
+
             return Row(
               children: [
                 CircleAvatar(
@@ -269,7 +284,10 @@ class _CoachMessagesTabState extends State<CoachMessagesTab> {
                 if (unreadCount > 0)
                   Container(
                     margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFF4B4B),
                       borderRadius: BorderRadius.circular(12),
@@ -289,7 +307,7 @@ class _CoachMessagesTabState extends State<CoachMessagesTab> {
                 ),
               ],
             );
-          }
+          },
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/stripe_service.dart';
 import '../../services/database_service.dart';
 import 'dart:async';
@@ -37,12 +38,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           .doc(user.uid)
           .snapshots()
           .listen((snapshot) {
-        if (snapshot.exists && snapshot.data()?['isElite'] == true) {
-          if (mounted) {
-            Navigator.pushReplacementNamed(context, '/onboarding');
-          }
-        }
-      });
+            if (snapshot.exists && snapshot.data()?['isElite'] == true) {
+              SharedPreferences.getInstance().then((prefs) {
+                prefs.setBool('subscription_passed_${user.uid}', true);
+              });
+              if (mounted) {
+                Navigator.pushReplacementNamed(context, '/onboarding');
+              }
+            }
+          });
     }
   }
 
@@ -74,7 +78,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 controller: emailController,
                 decoration: InputDecoration(
                   labelText: 'Your Email Address',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -83,7 +89,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 decoration: InputDecoration(
                   labelText: 'Coach Email Address',
                   hintText: 'Enter the email of your coach',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -91,7 +99,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 controller: transactionController,
                 decoration: InputDecoration(
                   labelText: 'Transaction ID / Reference',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
@@ -100,7 +110,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(color: Colors.grey),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -116,7 +129,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 );
                 return;
               }
-              
+
               if (user != null) {
                 try {
                   await DatabaseService().submitPaymentRequest(
@@ -125,14 +138,21 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     coachEmail: coachEmailController.text.trim().toLowerCase(),
                     transactionId: transactionController.text.trim(),
                   );
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool('subscription_passed_${user.uid}', true);
+                  await DatabaseService().updateUserEliteStatus(user.uid, true);
+
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Request sent to Coach! Waiting for approval.'),
+                        content: Text(
+                          'Payment details submitted! Proceeding to setup your profile.',
+                        ),
                         backgroundColor: Colors.green,
                       ),
                     );
+                    Navigator.pushReplacementNamed(context, '/onboarding');
                   }
                 } catch (e) {
                   if (context.mounted) {
@@ -148,9 +168,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFC58F8F),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: const Text('Submit Request', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Submit Request',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -162,28 +187,43 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
     // Using Stripe to handle the payment
     // Amount is 500 (in pounds, so 50000 pence for Stripe)
-    final success = await StripeService.instance.makePayment(
+    final result = await StripeService.instance.makePayment(
       amount: '50000',
       currency: 'GBP',
     );
 
-    if (success) {
+    if (result.success) {
       // Update the user's subscription status in Firestore
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         await DatabaseService().updateUserEliteStatus(user.uid, true);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('subscription_passed_${user.uid}', true);
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment Successful! Welcome to Pro.')),
+          const SnackBar(
+            content: Text('Payment Successful! Welcome to Pro.'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pushReplacementNamed(context, '/onboarding');
       }
     } else {
       if (mounted) {
+        final message = result.isCancelled
+            ? 'Payment was cancelled.'
+            : (result.errorMessage ?? 'Payment failed. Please try again.');
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment cancelled or failed.')),
+          SnackBar(
+            content: Text(message),
+            backgroundColor: result.isCancelled
+                ? Colors.black87
+                : Colors.redAccent,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     }
@@ -352,14 +392,39 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             onPressed: _isProcessing ? null : _handlePayment,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFC58F8F),
+                              disabledBackgroundColor: const Color(
+                                0xFFC58F8F,
+                              ).withOpacity(0.75),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               elevation: 0,
                             ),
                             child: _isProcessing
-                                ? const CircularProgressIndicator(
-                                    color: Colors.white,
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Processing...',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   )
                                 : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -404,6 +469,40 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                 color: const Color(0xFFC58F8F),
                                 fontWeight: FontWeight.bold,
                                 decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Center(
+                          child: TextButton(
+                            onPressed: () async {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user != null) {
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.setBool(
+                                  'subscription_passed_${user.uid}',
+                                  true,
+                                );
+                                await DatabaseService().updateUserEliteStatus(
+                                  user.uid,
+                                  true,
+                                );
+                              }
+                              if (context.mounted) {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/onboarding',
+                                );
+                              }
+                            },
+                            child: Text(
+                              'Skip for now →',
+                              style: GoogleFonts.outfit(
+                                color: Colors.black45,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
